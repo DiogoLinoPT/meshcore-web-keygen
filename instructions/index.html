@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeshCore Key Application Instructions</title>
+    <style>
+        :root {
+            --bg-main: #f8f9fa;
+            --bg-card: #ffffff;
+            --text-main: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --accent-primary: #f05e16; /* MeshCore Orange */
+            --accent-hover: #d24e10;
+            --accent-glow: rgba(240, 94, 22, 0.3);
+            --border-color: #e0e0e0;
+            --input-bg: #ffffff;
+            --input-focus: #f05e16;
+            --header-bg: #e2e8f0;
+            --header-text: #1a202c;
+            --success-color: #27ae60;
+            --error-bg: #fee;
+            --error-color: #c0392b;
+            --info-bg: #e8f4fd;
+            --info-color: #2980b9;
+            --code-bg: #f1f5f9;
+            --code-text: #1a202c;
+            --warning-bg: #fff3cd;
+            --warning-text: #856404;
+            --warning-border: #ffeaa7;
+            --warning-strong: #d63031;
+            --tip-bg: #d1ecf1;
+            --tip-color: #0c5460;
+            --tip-border: #bee5eb;
+            --step-bg: #f8f9fa;
+        }
+
+        [data-theme="dark"] {
+            --bg-main: #111113;
+            --bg-card: #1a1a1c;
+            --text-main: #f8f9fa;
+            --text-secondary: #a0aec0;
+            --accent-primary: #f05e16;
+            --accent-hover: #ff7635;
+            --accent-glow: rgba(240, 94, 22, 0.5);
+            --border-color: #2d3748;
+            --input-bg: #2d3748;
+            --input-focus: #f05e16;
+            --header-bg: #1a1a1c;
+            --header-text: #f8f9fa;
+            --success-color: #4ade80;
+            --error-bg: #4a1d1d;
+            --error-color: #f87171;
+            --info-bg: #1e3a5f;
+            --info-color: #60a5fa;
+            --code-bg: #2d3748;
+            --code-text: #e2e8f0;
+            --warning-bg: #4a3809;
+            --warning-text: #fef3c7;
+            --warning-border: #92400e;
+            --warning-strong: #f87171;
+            --tip-bg: #164e63;
+            --tip-color: #cffafe;
+            --tip-border: #0891b2;
+            --step-bg: #1a1a1c;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--bg-card);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+            padding-bottom: 20px;
+            border: 1px solid var(--border-color);
+            transition: background 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        [data-theme="dark"] .container {
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .header {
+            background: var(--header-bg);
+            color: var(--header-text);
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            border-bottom: 2px solid var(--accent-primary);
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .theme-switch-wrapper {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            z-index: 10;
+        }
+        
+        .theme-icon {
+            font-size: 0.9em;
+            line-height: 1;
+            transition: opacity 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .theme-switch {
+            display: inline-block;
+            position: relative;
+            width: 36px;
+            height: 18px;
+        }
+
+        .theme-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .theme-switch .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--input-bg);
+            transition: .3s;
+            border-radius: 18px;
+            border: 1px solid var(--border-color);
+        }
+
+        .theme-switch .slider:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 2px;
+            bottom: 2px;
+            background-color: var(--text-main);
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        .theme-switch input:checked + .slider {
+            background-color: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .theme-switch input:checked + .slider:before {
+            transform: translateX(18px);
+            background-color: white;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(45, 55, 72, 0.5);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 0;
+            border-radius: 18px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            z-index: 10;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .back-button:hover {
+            background: var(--input-bg);
+            color: var(--accent-primary);
+            border-color: var(--accent-primary);
+            border-radius: 18px;
+            width: auto;
+            min-width: 130px;
+            padding: 0 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transform: translateY(-2px);
+            text-decoration: none;
+        }
+
+        .back-button-text {
+            opacity: 0;
+            margin-left: 0;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+            font-size: 11px;
+            font-weight: normal;
+            width: 0;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .back-button:hover .back-button-text {
+            opacity: 1;
+            width: auto;
+            margin-left: 6px;
+        }
+
+        .back-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .content {
+            padding: 40px 40px 20px 40px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: var(--bg-card);
+            border-radius: 15px;
+            border-left: 5px solid var(--accent-primary);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            border-top: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .section {
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        .section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section h2 {
+            color: var(--text-main);
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .section h3 {
+            color: var(--text-main);
+            margin: 25px 0 15px 0;
+            font-size: 1.2em;
+        }
+
+        .step {
+            background: var(--step-bg);
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .step-number {
+            position: absolute;
+            top: -10px;
+            left: 20px;
+            background: var(--accent-primary);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 2px 5px var(--accent-glow);
+        }
+
+        .step-content {
+            margin-left: 40px;
+        }
+
+        .image-placeholder {
+            background: var(--info-bg);
+            border: 2px dashed var(--info-color);
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            color: var(--info-color);
+            font-style: italic;
+        }
+
+        .warning {
+            background: var(--warning-bg);
+            border: 1px solid var(--warning-border);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            color: var(--warning-text);
+        }
+
+        .warning strong {
+            color: var(--warning-strong);
+        }
+
+        .tip {
+            background: var(--tip-bg);
+            border: 1px solid var(--tip-border);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            color: var(--tip-color);
+        }
+
+        .code-block {
+            background: var(--code-bg);
+            color: var(--code-text);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 15px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+        }
+
+        ul, ol {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .section ul li:last-child {
+            margin-bottom: 0;
+        }
+
+        .section ul {
+            padding-top: 10px;
+        }
+
+        .prerequisites {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-left: 4px solid var(--info-color);
+        }
+
+        .prerequisites h3 {
+            color: var(--text-main);
+            margin-bottom: 15px;
+        }
+
+        .device-selector {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .device-btn {
+            flex: 1;
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 12px;
+            padding: 25px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        [data-theme="dark"] .device-btn {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .device-btn:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px var(--accent-glow);
+        }
+
+        .device-btn.active {
+            border-color: var(--accent-primary);
+            background: var(--accent-primary);
+            color: white;
+            box-shadow: 0 10px 20px var(--accent-glow);
+        }
+
+        .device-btn.active .device-desc {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .device-icon {
+            font-size: 2em;
+        }
+
+        .device-title {
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+
+        .device-desc {
+            font-size: 0.9em;
+            color: var(--text-secondary);
+        }
+
+        .instructions-content {
+            display: none;
+        }
+
+        .instructions-content.active {
+            display: block;
+        }
+
+        .sub-steps {
+            background: var(--step-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid var(--accent-primary);
+        }
+
+        .sub-steps h4 {
+            color: var(--text-main);
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .sub-steps p {
+            margin-bottom: 15px;
+        }
+
+        .image-container {
+            margin: 20px 0;
+            text-align: center;
+            background: var(--input-bg);
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .instruction-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        [data-theme="dark"] .instruction-image {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            /* Soften images in dark mode */
+            opacity: 0.9;
+        }
+
+        .instruction-image:hover {
+            transform: scale(1.02);
+            transition: transform 0.3s ease;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            opacity: 1;
+        }
+
+        .step-content:not(:has(.image-container)) {
+            padding-bottom: 20px;
+        }
+
+        .sub-steps:not(:has(.image-container)) {
+            padding-bottom: 20px;
+        }
+        
+        a {
+            color: var(--accent-primary);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        a:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 5px;
+                border-radius: 10px;
+            }
+            .content {
+                padding: 15px;
+            }
+            .section {
+                padding: 15px;
+                margin-bottom: 20px;
+            }
+            .step {
+                padding: 15px;
+            }
+            .step .step-content {
+                margin-left: 0;
+            }
+            .sub-steps {
+                padding: 15px;
+                padding: 20px;
+            }
+            .header {
+                padding-top: 70px;
+            }
+            .back-button {
+                top: 15px;
+                left: 15px;
+            }
+            .device-selector {
+                flex-direction: column;
+                gap: 12px;
+            }
+            .device-btn {
+                padding: 20px 15px;
+            }
+            .theme-switch-wrapper {
+                top: 15px;
+                right: 15px;
+            }
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 40px;
+        }
+
+        .footer a {
+            color: var(--text-main);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer a:hover {
+            color: var(--accent-primary);
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="../" class="back-button">
+                <span class="back-arrow">←</span><span class="back-button-text">Back to Generator</span>
+            </a>
+            <h1>Using Your Generated Key</h1>
+            <p>Step-by-step guide to apply generated keys to your MeshCore device</p>
+            <div class="theme-switch-wrapper" title="Toggle Light/Dark Theme">
+                <span class="theme-icon light-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </span>
+                <label class="theme-switch" for="themeToggle">
+                    <input type="checkbox" id="themeToggle" />
+                    <span class="slider"></span>
+                </label>
+                <span class="theme-icon dark-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </span>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="prerequisites">
+                <h3>📋 Prerequisites</h3>
+                <ul>
+                    <li>
+                        Generated Ed25519 key pair from the
+                        <a href="../" target="_blank" rel="noopener">key generator</a>
+                    </li>
+                    <li>MeshCore device (companion or repeater)</li>
+                    <li>MeshCore mobile app installed on your phone or <a href="https://app.meshcore.nz/" target="_blank" rel="noopener">MeshCore Web App</a></li>
+                    <li>USB-C cable for connecting to your device</li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h2>🔧 Select Your Setup</h2>
+                <p>Choose your setup to see the appropriate instructions:</p>
+                
+                <div class="device-selector">
+                    <button class="device-btn active" data-type="companion">
+                        <span class="device-icon">📱</span>
+                        <span class="device-title">Companion Device</span>
+                        <span class="device-desc">Direct key import via app</span>
+                    </button>
+                    <button class="device-btn" data-type="repeater-serial">
+                        <span class="device-icon">💻</span>
+                        <span class="device-title">Repeater + Computer</span>
+                        <span class="device-desc">Direct console command</span>
+                    </button>
+                    <button class="device-btn" data-type="repeater-companion">
+                        <span class="device-icon">📡</span>
+                        <span class="device-title">Repeater + Companion</span>
+                        <span class="device-desc">Set key over LoRa via app</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="section instructions-content active" id="companion-instructions">
+                <h2>🔧 Companion Device Instructions</h2>
+                <p>Follow these steps to apply your custom key to a companion device:</p>
+
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Connect to Your Device</h3>
+                        <p>Connect your phone to the MeshCore device using a USB-C cable or Bluetooth.</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Open MeshCore App</h3>
+                        <p>Launch the MeshCore mobile app on your phone and connect to your device.</p>
+                        <div class="image-container">
+                            <img src="images/02_Connect.webp" alt="MeshCore app home screen showing connected device" class="instruction-image">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Access Settings</h3>
+                        <p>Tap the Settings gear icon in the top-right corner of the app.</p>
+                        <div class="image-container">
+                            <img src="images/03_Settings.webp" alt="MeshCore app with settings gear icon highlighted" class="instruction-image">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>Manage Identity Key</h3>
+                        <p>Scroll down and tap "Manage Identity Key" in the settings menu.</p>
+                        <div class="image-container">
+                            <img src="images/04_Manage_Identity_Key.webp" alt="Settings menu with Manage Identity Key option highlighted" class="instruction-image">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">5</div>
+                    <div class="step-content">
+                        <h3>Enter Private Key</h3>
+                        <p>Copy your private key from the key generator and paste it into the text box. Make sure to copy the entire 128-character key.</p>
+                        <div class="image-container">
+                            <img src="images/05_Paste_Private_Key.webp" alt="Private key input field with sample key pasted" class="instruction-image">
+                        </div>
+                        <div class="warning">
+                            <strong>Important:</strong> Only paste the private key, not the public key. The private key is 128 characters long.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">6</div>
+                    <div class="step-content">
+                        <h3>Import the Key</h3>
+                        <p>Tap "Import Private Key" to apply the key to your device.</p>
+                        <div class="image-container">
+                            <img src="images/06_Import_Private_Key.webp" alt="Import Private Key button highlighted" class="instruction-image">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">7</div>
+                    <div class="step-content">
+                        <h3>Save Changes</h3>
+                        <p>Tap the checkmark ✓ in the top-right corner to save your changes. This step is crucial - the key won't be applied until you save.</p>
+                        <div class="image-container">
+                            <img src="images/07_Checkmark_Save_Settings.webp" alt="Checkmark save button highlighted in top-right corner" class="instruction-image">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">8</div>
+                    <div class="step-content">
+                        <h3>Verify the Change</h3>
+                        <p>Return to the main screen and verify that your new public key is displayed. The first two characters should match your desired prefix.</p>
+                        <div class="image-container">
+                            <img src="images/08_Verify_Change.webp" alt="Main screen showing new public key with prefix highlighted" class="instruction-image">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section instructions-content" id="repeater-serial-instructions">
+                <h2>💻 Repeater + Computer Instructions</h2>
+                <p>If you can connect your repeater directly to a computer, this is the fastest method:</p>
+
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Connect via USB Serial</h3>
+                        <p>Connect your repeater device to your computer via USB serial connection.</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Access the Console</h3>
+                        <p>Open the <a href="https://flasher.meshcore.co.uk/" target="_blank">MeshCore Web Console</a> or use any terminal application to connect to your device.</p>
+                        <div class="tip">
+                            <strong>💡 Tip:</strong> The web console at flasher.meshcore.co.uk provides an easy interface with repeater configuration command reference for configuring your device.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Set the Private Key</h3>
+                        <p>Run the following command in the console:</p>
+                        <div class="code-block">
+                            set prv.key &lt;your_private_key&gt;
+                        </div>
+                        <p>Replace <code>&lt;your_private_key&gt;</code> with your 128-character private key from the key generator.</p>
+                        <div class="warning">
+                            <strong>Important:</strong> Make sure to use the complete 128-character private key. The command will change the device's private key immediately.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>Verify the Change</h3>
+                        <p>You can verify the key change by checking the device's public key display in settings.</p>
+                    </div>
+                </div>
+
+                <div class="tip">
+                    <strong>💡 Why use the Serial Console?</strong>
+                    <ul>
+                        <li>No need to flash companion firmware</li>
+                        <li>Change the key on the spot without switching firmware</li>
+                        <li>Quick if you’re comfortable using a console</li>
+                        <li>Works with MeshCore web console or any terminal app</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="section instructions-content" id="repeater-companion-instructions">
+                <h2>📡 Repeater + Companion Instructions</h2>
+                <p>You can change the private key on a repeater remotely over LoRa using the MeshCore app and the <code>set prv.key</code> command. Follow these steps:</p>
+
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Select Repeater from Contact List</h3>
+                        <p>Open the MeshCore app and select the repeater from your Contact List.</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Enter Password and Log into Repeater</h3>
+                        <p>Enter the repeater password and log in to access the repeater.</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Open Command Line</h3>
+                        <p>Click on the <strong>Command Line</strong> option at the bottom of the repeater info screen.</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>Set the Private Key</h3>
+                        <p>Enter the following command and press Enter:</p>
+                        <div class="code-block">
+                            set prv.key &lt;hex&gt;
+                        </div>
+                        <p>Replace <code>&lt;hex&gt;</code> with your 128-character private key from the key generator.</p>
+                        <div class="warning">
+                            <strong>Important:</strong> Use your complete 128-character private key (hex). The new private key will take effect after you reboot the repeater.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">5</div>
+                    <div class="step-content">
+                        <h3>Reboot the Repeater</h3>
+                        <p>Reboot the repeater after running <code>set prv.key &lt;hex&gt;</code> for the new private key to take effect.</p>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="section instructions-content" id="json-import-instructions">
+                <h2>📄 JSON Import Method (Alternative)</h2>
+                <p>If you downloaded the JSON file from the key generator, you can use this alternative method:</p>
+
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Access Import Config</h3>
+                        <p>In the MeshCore app settings, tap "Import Config" instead of "Manage Identity Key".</p>
+                        <div class="image-container">
+                            <img src="images/JSON_01_Import_Config.webp" alt="Settings menu with Import Config option highlighted" class="instruction-image">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Select JSON File</h3>
+                        <p>Click Select File to open your OS's file picker. Choose your downloaded JSON file from the file picker. The file should be named something like <code>meshcore_FA_1234567890.json</code>.</p>
+                        <div class="image-container">
+                            <img src="images/JSON_02_Select_File.webp" alt="File picker showing JSON file selection" class="instruction-image">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Import Configuration</h3>
+                        <p>Tap "Import Config" to import the keys from your JSON file.</p>
+                        <div class="image-container">
+                            <img src="images/JSON_03_Import_Config.webp" alt="Import Config button highlighted" class="instruction-image">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>Import Success</h3>
+                        <p>You'll see a success notification confirming that the configuration has been imported.</p>
+                        <div class="image-container">
+                            <img src="images/JSON_04_Import_Success_Notification.webp" alt="Import success notification" class="instruction-image">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">5</div>
+                    <div class="step-content">
+                        <h3>Verify the Import</h3>
+                        <p>Return to the main screen and verify that your new public key is displayed. The first two characters should match your desired prefix.</p>
+                        <div class="image-container">
+                            <img src="images/JSON_05_Verify_Result.webp" alt="Main screen showing new public key with prefix highlighted" class="instruction-image">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>🔍 Troubleshooting</h2>
+
+                <h3>Common Issues</h3>
+                <ul>
+                    <li><strong>Key not appearing:</strong> Make sure you tapped the checkmark ✓ to save changes</li>
+                    <li><strong>Wrong key format:</strong> Ensure you're copying the entire 128-character private key</li>
+                    <li><strong>App not detecting device:</strong> Try disconnecting and reconnecting the USB cable</li>
+                    <li><strong>Firmware flash fails:</strong> Try a different USB cable or USB port</li>
+                    <li><strong>Key import fails:</strong> Verify the key was generated correctly and try again</li>
+                </ul>
+
+                <h3>Verification Steps</h3>
+                <ol>
+                    <li>Check that the public key displayed matches your generated key</li>
+                    <li>Verify the first two characters match your desired prefix</li>
+                    <li>Test the connection to ensure the device is working properly</li>
+                    <li>Check the MeshCore network to see your device with the new identifier</li>
+                </ol>
+
+                <div class="tip">
+                    <strong>Pro Tip:</strong> Keep a backup of your private key in a secure location. You'll need it if you ever need to restore your device configuration.
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>📞 Need Help?</h2>
+                <p>If you encounter issues not covered in this guide:</p>
+                <ul>
+                    <li><a href="https://github.com/meshcore-dev/MeshCore/blob/main/docs/faq.md" target="_blank" rel="noopener">MeshCore Documentation (FAQ)</a></li>
+                    <li><a href="https://discord.gg/bSuST8xvet" target="_blank" rel="noopener">MeshCore Discord Community</a></li>
+                    <li><a href="https://meshcore.co.uk/contact.html" target="_blank" rel="noopener">Contact MeshCore Support</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <div style="margin-bottom: 5px;">💻 <a href="https://github.com/DiogoLinoPT/meshcore-web-keygen" target="_blank" rel="noopener" style="text-decoration: underline;">Source code at Github</a></div>
+        <div style="font-size: 0.9em; opacity: 0.8;">Based on the original concept by <a href="https://github.com/agessaman/meshcore-web-keygen" target="_blank" rel="noopener">agessaman</a>.</div>
+    </div>
+
+    <script>
+        // Theme initialization and toggle logic implementation
+        const themeToggle = document.getElementById('themeToggle');
+        
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            
+            themeToggle.checked = (theme === 'dark');
+            const lightIcon = document.querySelector('.light-icon');
+            const darkIcon = document.querySelector('.dark-icon');
+            if (lightIcon && darkIcon) {
+                lightIcon.style.opacity = theme === 'dark' ? '0.5' : '1';
+                darkIcon.style.opacity = theme === 'dark' ? '1' : '0.5';
+            }
+        }
+        
+        // Exact same logic as index.html
+        const savedTheme = localStorage.getItem('theme');
+        const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark) || (!savedTheme && !systemPrefersDark)) {
+            setTheme('dark');
+        } else if (savedTheme === 'light') {
+            setTheme('light');
+        } else {
+            setTheme('dark');
+        }
+
+        themeToggle.addEventListener('change', (e) => {
+            setTheme(e.target.checked ? 'dark' : 'light');
+        });
+
+        // Device type selector functionality
+        const deviceBtns = document.querySelectorAll('.device-btn');
+        const instructionContents = document.querySelectorAll('.instructions-content');
+        const jsonImportSection = document.getElementById('json-import-instructions');
+
+        deviceBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const selectedType = btn.getAttribute('data-type');
+                
+                // Update button states
+                deviceBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // Update instruction visibility
+                instructionContents.forEach(content => {
+                    content.classList.remove('active');
+                });
+                
+                const targetContent = document.getElementById(selectedType + '-instructions');
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                }
+                
+                // Show/hide JSON import section based on workflow
+                if (jsonImportSection) {
+                    if (selectedType === 'companion') {
+                        jsonImportSection.classList.add('active');
+                    } else {
+                        jsonImportSection.classList.remove('active');
+                    }
+                }
+                
+                // Smooth scroll to the instructions
+                setTimeout(() => {
+                    targetContent.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                }, 100);
+            });
+        });
+
+        // Initialize with companion instructions visible
+        document.addEventListener('DOMContentLoaded', () => {
+            const companionInstructions = document.getElementById('companion-instructions');
+            if (companionInstructions) {
+                companionInstructions.classList.add('active');
+            }
+            
+            // Show JSON import section by default (companion workflow)
+            if (jsonImportSection) {
+                jsonImportSection.classList.add('active');
+            }
+        });
+    </script>
+</body>
+</html>

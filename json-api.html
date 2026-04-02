@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeshCore Vanity API</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #111;
+            color: #0f0;
+            padding: 20px;
+            margin: 0;
+            word-break: break-all;
+        }
+        .error { color: #f55; }
+        .loading { color: #aaa; }
+    </style>
+</head>
+<body>
+    <div id="output" class="loading">Initializing MeshCore engine...</div>
+
+    <script type="module">
+        import { MeshCoreKeyGenerator } from './js/meshcore-engine.js';
+
+        const outputDiv = document.getElementById('output');
+        const keyGenerator = new MeshCoreKeyGenerator();
+
+        function logError(msg) {
+            outputDiv.className = 'error';
+            outputDiv.textContent = JSON.stringify({ error: msg }, null, 2);
+            // Broadcast error to parent if in iframe
+            if (window.parent !== window) {
+                window.parent.postMessage({ type: 'meshcore-api', error: msg }, '*');
+            }
+        }
+
+        async function processGeneration(prefix) {
+            if (!prefix || prefix.length < 1 || prefix.length > 8 || !/^[0-9A-F]+$/i.test(prefix)) {
+                return logError("Invalid prefix. Must be 1-8 hex characters.");
+            }
+            if (prefix.startsWith('00') || prefix.startsWith('FF')) {
+                return logError("Reserved prefix. Cannot start with 00 or FF.");
+            }
+
+            try {
+                outputDiv.textContent = `Starting generation for prefix: ${prefix}...`;
+                
+                await keyGenerator.initialize();
+                
+                outputDiv.textContent = `Generating keys... (Engine: ${keyGenerator.generationMode})`;
+
+                const result = await keyGenerator.generateVanityKey(prefix.toUpperCase(), prefix.length);
+
+                if (result) {
+                    const jsonResult = {
+                        prefix: prefix.toUpperCase(),
+                        seed: result.seed,
+                        publicKey: result.publicKey,
+                        privateKey: result.privateKey,
+                        attempts: result.attempts,
+                        timeElapsedSeconds: result.timeElapsed
+                    };
+                    
+                    // Display on screen
+                    outputDiv.className = '';
+                    outputDiv.innerHTML = `<pre>${JSON.stringify(jsonResult, null, 2)}</pre>`;
+                    
+                    // Broadcast to parent if in an iframe
+                    if (window.parent !== window) {
+                        window.parent.postMessage({ type: 'meshcore-api', data: jsonResult }, '*');
+                    }
+                } else {
+                    logError("Generation halted unexpectedly.");
+                }
+
+            } catch (err) {
+                logError(err.message);
+            }
+        }
+
+        // Mode 1: URL Parameter (?prefix=F8)
+        const urlParams = new URLSearchParams(window.location.search);
+        const prefixParam = urlParams.get('prefix');
+        if (prefixParam) {
+            processGeneration(prefixParam);
+        } else {
+            outputDiv.textContent = "Waiting for configuration. Add ?prefix=XX to the URL, or send a postMessage.";
+        }
+
+        // Mode 2: iframe postMessage API
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'meshcore-api-request') {
+                const requestedPrefix = event.data.prefix;
+                if (keyGenerator.isRunning) {
+                    keyGenerator.stop();
+                }
+                processGeneration(requestedPrefix);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeshCore Custom Key Generator</title>
+    <script>
+        console.log('✓ Using Web Crypto API for Ed25519 key generation');
+        console.log('✓ CPU cores available:', navigator.hardwareConcurrency || 'unknown');
+    </script>
+    <style>
+        :root {
+            --bg-main: #f8f9fa;
+            --bg-card: #ffffff;
+            --text-main: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --accent-primary: #f05e16; /* MeshCore Orange */
+            --accent-hover: #d24e10;
+            --accent-glow: rgba(240, 94, 22, 0.3);
+            --border-color: #e0e0e0;
+            --input-bg: #ffffff;
+            --input-focus: #f05e16;
+            --header-bg: #e2e8f0;
+            --header-text: #1a202c;
+            --success-color: #27ae60;
+            --error-bg: #fee;
+            --error-color: #c0392b;
+            --info-bg: #e8f4fd;
+            --info-color: #2980b9;
+            --modal-bg: rgba(0, 0, 0, 0.5);
+            --code-bg: #f1f5f9;
+        }
+
+        [data-theme="dark"] {
+            --bg-main: #111113;
+            --bg-card: #1a1a1c;
+            --text-main: #f8f9fa;
+            --text-secondary: #a0aec0;
+            --accent-primary: #f05e16;
+            --accent-hover: #ff7635;
+            --accent-glow: rgba(240, 94, 22, 0.5);
+            --border-color: #2d3748;
+            --input-bg: #2d3748;
+            --input-focus: #f05e16;
+            --header-bg: #1a1a1c;
+            --header-text: #f8f9fa;
+            --success-color: #4ade80;
+            --error-bg: #4a1d1d;
+            --error-color: #f87171;
+            --info-bg: #1e3a5f;
+            --info-color: #60a5fa;
+            --modal-bg: rgba(0, 0, 0, 0.8);
+            --code-bg: #2d3748;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 20px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        a {
+            color: var(--accent-primary);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        a:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto 40px auto;
+            background: var(--bg-card);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            transition: background 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        [data-theme="dark"] .container {
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .header {
+            background: var(--header-bg);
+            color: var(--header-text);
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            border-bottom: 2px solid var(--accent-primary);
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .theme-switch-wrapper {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            z-index: 10;
+        }
+        
+        .theme-icon {
+            font-size: 0.9em;
+            line-height: 1;
+            transition: opacity 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .theme-switch {
+            display: inline-block;
+            position: relative;
+            width: 36px;
+            height: 18px;
+        }
+
+        .theme-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .theme-switch .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--input-bg);
+            transition: .3s;
+            border-radius: 18px;
+            border: 1px solid var(--border-color);
+        }
+
+        .theme-switch .slider:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 2px;
+            bottom: 2px;
+            background-color: var(--text-main);
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        .theme-switch input:checked + .slider {
+            background-color: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .theme-switch input:checked + .slider:before {
+            transform: translateX(18px);
+            background-color: white;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-main);
+            font-size: 1.1em;
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            padding: 15px;
+            background: var(--input-bg);
+            color: var(--text-main);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: var(--input-focus);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .hex-input {
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: var(--accent-primary);
+            color: white;
+            box-shadow: 0 4px 10px var(--accent-glow);
+        }
+
+        .btn-primary:hover, a.btn-primary:hover {
+            background: var(--accent-hover);
+            color: white;
+            text-decoration: none;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px var(--accent-glow);
+        }
+
+        .btn-secondary {
+            background: var(--input-bg);
+            color: var(--text-main);
+            border: 2px solid var(--border-color);
+        }
+
+        .btn-secondary:hover, a.btn-secondary:hover {
+            background: var(--border-color);
+            color: var(--text-main);
+            text-decoration: none;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .progress-container {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-primary);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 10px;
+            box-shadow: 0 0 10px var(--accent-primary);
+        }
+
+        .progress-text {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .result-container {
+            margin-top: 30px;
+            padding: 25px;
+            background: var(--input-bg);
+            border-radius: 10px;
+            border-left: 5px solid var(--success-color);
+            border-right: 1px solid var(--border-color);
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            display: none;
+        }
+
+        .result-container h3 {
+            color: var(--success-color);
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .key-display {
+            background: var(--bg-card);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        .key-label {
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .key-value {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            word-break: break-all;
+            color: var(--text-main);
+            background: var(--code-bg);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: var(--bg-card);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .error {
+            background: var(--error-bg);
+            color: var(--error-color);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid var(--error-color);
+            margin-top: 20px;
+            display: none;
+        }
+
+        .info {
+            background: var(--info-bg);
+            color: var(--info-color);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid var(--info-color);
+            margin-top: 20px;
+            margin-bottom: 30px;
+        }
+
+        .info h4 {
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .info ul {
+            margin-left: 20px;
+        }
+
+        .info li {
+            margin-bottom: 5px;
+        }
+
+        #prefixInfo {
+            background: var(--info-bg) !important;
+            border-left-color: var(--accent-primary) !important;
+        }
+        #prefixInfo div:first-child {
+            color: var(--text-main) !important;
+        }
+        #prefixDifficulty {
+            color: var(--text-secondary) !important;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            border: 1px solid var(--border-color);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        .modal-content::-webkit-scrollbar {
+            display: none;
+        }
+        .modal-content {
+            scrollbar-width: none;
+        }
+
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-header {
+            background: var(--header-bg);
+            padding: 20px 25px;
+            border-radius: 15px 15px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.3em;
+            color: var(--text-main);
+        }
+
+        .close {
+            color: var(--text-secondary);
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .close:hover {
+            color: var(--accent-primary);
+        }
+
+        .modal-body {
+            padding: 25px;
+        }
+
+        .import-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: var(--input-bg);
+            border-radius: 10px;
+            border-left: 4px solid var(--accent-primary);
+            border-top: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .import-section h4 {
+            margin: 0 0 15px 0;
+            color: var(--text-main);
+            font-size: 1.1em;
+        }
+
+        .import-section ol, .import-section ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .import-section li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        code {
+            background: var(--code-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            border: 1px solid var(--border-color);
+        }
+
+        .nav-button {
+            position: absolute;
+            bottom: 15px;
+            right: 20px;
+            left: auto;
+            background: rgba(45, 55, 72, 0.5);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 4px 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 11px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .nav-button:hover {
+            background: var(--input-bg);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            text-decoration: none;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 20px;
+        }
+
+        .footer a {
+            color: var(--text-main);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer a:hover {
+            color: var(--accent-primary);
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+            .content {
+                padding: 20px;
+            }
+            .button-group {
+                flex-direction: column;
+            }
+            .header {
+                padding-top: 70px;
+            }
+            .header h1 {
+                font-size: 2em;
+            }
+            .theme-switch-wrapper {
+                top: 15px;
+                right: 15px;
+            }
+            .nav-button {
+                bottom: 10px;
+                right: 15px;
+                left: auto;
+                padding: 4px 10px;
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="./instructions/" class="nav-button" title="View detailed instructions">
+                <span style="font-size: 1.2em;">📖</span> Step-by-step Guide
+            </a>
+            <h1>MeshCore Key Generator</h1>
+            <p>Generate custom Ed25519 keys for MeshCore</p>
+            <div class="theme-switch-wrapper" title="Toggle Light/Dark Theme">
+                <span class="theme-icon light-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </span>
+                <label class="theme-switch" for="themeToggle">
+                    <input type="checkbox" id="themeToggle" />
+                    <span class="slider"></span>
+                </label>
+                <span class="theme-icon dark-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </span>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="info">
+                <h4>About MeshCore Keys</h4>
+                <ul>
+                    <li>Meshcore uses the first two characters of your public key as a node identifier. It is helpful to be able to select your node id to avoid collisions with neighbors.</li>
+                    <li>This key generator does all processing in your browser - keys never leave your device</li>
+                </ul>
+            </div>
+
+
+            <!-- Import Instructions Modal -->
+            <div id="importModal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>📋 How to Import Keys into MeshCore</h3>
+                        <span class="close" id="closeModal">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div class="import-section">
+                            <h4>🔧 For Companion Nodes</h4>
+                            <ol>
+                                <li>Connect to your node using the MeshCore app</li>
+                                <li>Tap the <strong>Settings gear</strong> icon</li>
+                                <li>Tap <strong>Manage Identity Key</strong></li>
+                                <li>Paste your <strong>Private Key</strong> into the text box</li>
+                                <li>Tap <strong>Import Private Key</strong></li>
+                                <li><strong>Important:</strong> Tap the checkmark ✓ to save changes in settings</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="import-section">
+                            <h4>💻 For Repeater + Computer</h4>
+                            <p style="margin-bottom: 10px;">If you can connect your repeater directly to a computer:</p>
+                            <ol>
+                                <li>Connect to your repeater via USB serial</li>
+                                <li>Open the <a href="https://flasher.meshcore.co.uk/" target="_blank">MeshCore Web Console</a> or use any terminal</li>
+                                <li>Run the command: <code>set prv.key &lt;your_private_key&gt;</code></li>
+                                <li>This will change the device's private key directly</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="import-section">
+                            <h4>📡 For Repeater + Companion</h4>
+                            <p style="margin-bottom: 10px;">You can set the private key on a repeater remotely over LoRa:</p>
+                            <ol>
+                                <li>Select Repeater from Contact List</li>
+                                <li>Enter Password and Log into Repeater</li>
+                                <li>Click on <strong>Command Line</strong> option (at the bottom of the repeater info screen)</li>
+                                <li>Enter <code>set prv.key &lt;hex&gt;</code> and press Enter</li>
+                                <li>Reboot the repeater after <code>set prv.key &lt;hex&gt;</code> for the new private key to take effect</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="import-section" style="text-align: center; margin-top: 20px; border: none; background: transparent;">
+                            <a href="./instructions/" class="btn btn-primary" style="display: inline-block; text-decoration: none;">
+                                📋 View Complete Step-by-Step Instructions
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <form id="keygenForm">
+                <div class="form-group">
+                    <label for="targetPrefix">Target Prefix (Hex):</label>
+                    <input type="text" id="targetPrefix" class="hex-input" 
+                           placeholder="Enter hex prefix (e.g., F8, F8A1, FFF, etc.)" 
+                           maxlength="8" pattern="[0-9A-Fa-f]+">
+                    <small style="color: #7f8c8d; margin-top: 5px; display: block;">
+                        Enter any hex prefix (1-8 characters). Longer prefixes take longer to find.
+                    </small>
+                    <div id="prefixInfo" style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea; display: none;">
+                        <div style="font-weight: 600; color: #2c3e50; margin-bottom: 5px;">📊 Difficulty Estimate</div>
+                        <div id="prefixDifficulty" style="font-size: 14px; color: #34495e;"></div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary" id="generateBtn">
+                        Generate Key
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="stopBtn" disabled>
+                        Stop
+                    </button>
+                </div>
+            </form>
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">
+                    Initializing...
+                </div>
+            </div>
+
+            <div class="error" id="errorContainer"></div>
+
+            <div class="result-container" id="resultContainer">
+                <h3>✓ Key Generated Successfully!</h3>
+                
+                <div class="key-display">
+                    <div class="key-label">Public Key:</div>
+                    <div class="key-value" id="publicKey"></div>
+                </div>
+
+                <div class="key-display">
+                    <div class="key-label">Private Key:</div>
+                    <div class="key-value" id="privateKey"></div>
+                </div>
+
+                <div class="key-display">
+                    <div class="key-label">Seed:</div>
+                    <div class="key-value" id="seedHex"></div>
+                </div>
+
+                <div class="key-display" id="validationStatusContainer" style="display: none;">
+                    <div class="key-label">Validation Status:</div>
+                    <div class="key-value" style="color: var(--success-color); font-weight: bold; word-break: normal; overflow-wrap: break-word;">
+                        ✓ RFC 8032 Ed25519 compliant - Proper SHA-512 expansion, scalar clamping, and key consistency verified
+                    </div>
+                </div>
+
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="attemptsCount">0</div>
+                        <div class="stat-label">Attempts</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="timeElapsed">0s</div>
+                        <div class="stat-label">Time</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="keysPerSecond">0</div>
+                        <div class="stat-label">Keys/sec</div>
+                    </div>
+                </div>
+
+                <div class="button-group" style="margin-top: 20px;">
+                    <button type="button" class="btn btn-primary" id="downloadBtn">
+                        Download JSON
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="importInfoBtn">
+                        📋 How to Import Keys
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Footer -->
+    <div class="footer">
+        <div style="margin-bottom: 5px;">💻 <a href="https://github.com/DiogoLinoPT/meshcore-web-keygen" target="_blank" rel="noopener" style="text-decoration: underline;">Source code at Github</a></div>
+        <div style="font-size: 0.9em; opacity: 0.8;">Based on the original concept by <a href="https://github.com/agessaman/meshcore-web-keygen" target="_blank" rel="noopener">agessaman</a>.</div>
+    </div>
+
+    <script>
+        // Theme initialization and toggle logic
+        const themeToggle = document.getElementById('themeToggle');
+        
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            
+            themeToggle.checked = (theme === 'dark');
+            const lightIcon = document.querySelector('.light-icon');
+            const darkIcon = document.querySelector('.dark-icon');
+            if (lightIcon && darkIcon) {
+                lightIcon.style.opacity = theme === 'dark' ? '0.5' : '1';
+                darkIcon.style.opacity = theme === 'dark' ? '1' : '0.5';
+            }
+        }
+        
+        // Check local storage or system preference
+        const savedTheme = localStorage.getItem('theme');
+        const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        // Default to dark theme unless user explicitly chose light, or system is light and no preference saved
+        if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark) || (!savedTheme && !systemPrefersDark)) { // MeshCore Default: Dark Focus
+            setTheme('dark');
+        } else if (savedTheme === 'light') {
+            setTheme('light');
+        } else {
+            setTheme('dark');
+        }
+
+        themeToggle.addEventListener('change', (e) => {
+            setTheme(e.target.checked ? 'dark' : 'light');
+        });
+    </script>
+    <script type="module">
+        import { MeshCoreKeyGenerator } from './js/meshcore-engine.js';
+
+        // Global key generator instance
+        const keyGenerator = new MeshCoreKeyGenerator();
+        window.keyGenerator = keyGenerator;
+
+        // Debug helper for repeatable perf checks from the browser console:
+        // await runPerfSmoke('F8', 10)
+        window.runPerfSmoke = async function(prefix = 'F8', durationSeconds = 10) {
+            const samples = [];
+            keyGenerator.perfDebug = true;
+            const sampleTimer = setInterval(() => {
+                if (!keyGenerator.isRunning) return;
+                const elapsed = (Date.now() - keyGenerator.startTime) / 1000;
+                if (elapsed > 0) {
+                    samples.push(keyGenerator.attempts / elapsed);
+                }
+            }, 1000);
+
+            try {
+                const runPromise = keyGenerator.generateVanityKey(prefix.toUpperCase(), prefix.length);
+                await new Promise(resolve => setTimeout(resolve, Math.max(1, durationSeconds) * 1000));
+                keyGenerator.stop();
+                await runPromise.catch(() => null);
+
+                if (samples.length === 0) {
+                    return { samples: [], medianKeysPerSec: 0, note: 'No samples collected' };
+                }
+
+                const sorted = [...samples].sort((a, b) => a - b);
+                const mid = Math.floor(sorted.length / 2);
+                const median = sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+                return {
+                    prefix: prefix.toUpperCase(),
+                    durationSeconds,
+                    samples: sorted.map(v => Math.round(v)),
+                    medianKeysPerSec: Math.round(median)
+                };
+            } finally {
+                clearInterval(sampleTimer);
+            }
+        };
+
+        // DOM elements
+        const form = document.getElementById('keygenForm');
+        const targetPrefixInput = document.getElementById('targetPrefix');
+        const generateBtn = document.getElementById('generateBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const resultContainer = document.getElementById('resultContainer');
+        const errorContainer = document.getElementById('errorContainer');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const importInfoBtn = document.getElementById('importInfoBtn');
+        const importModal = document.getElementById('importModal');
+        const closeModal = document.getElementById('closeModal');
+
+        // Calculate and display difficulty estimate
+        function updateDifficultyEstimate(prefix, currentRate = null) {
+            const prefixInfo = document.getElementById('prefixInfo');
+            const prefixDifficulty = document.getElementById('prefixDifficulty');
+            
+            if (!prefix || prefix.length === 0) {
+                prefixInfo.style.display = 'none';
+                return;
+            }
+            
+            // Calculate probability and expected attempts
+            const probability = 1 / Math.pow(16, prefix.length);
+            const expectedAttempts = 1 / probability;
+            
+            // Format the expected attempts in a human-readable way
+            let attemptsText;
+            if (expectedAttempts >= 1e12) {
+                attemptsText = `${(expectedAttempts / 1e12).toFixed(1)} trillion`;
+            } else if (expectedAttempts >= 1e9) {
+                attemptsText = `${(expectedAttempts / 1e9).toFixed(1)} billion`;
+            } else if (expectedAttempts >= 1e6) {
+                attemptsText = `${(expectedAttempts / 1e6).toFixed(1)} million`;
+            } else if (expectedAttempts >= 1e3) {
+                attemptsText = `${(expectedAttempts / 1e3).toFixed(1)} thousand`;
+            } else {
+                attemptsText = Math.round(expectedAttempts).toLocaleString();
+            }
+            
+            // Calculate estimated time (use current rate if provided, otherwise default to 10k keys/sec)
+            const estimatedKeysPerSecond = currentRate || 10000;
+            const estimatedSeconds = expectedAttempts / estimatedKeysPerSecond;
+            
+            let timeText;
+            if (estimatedSeconds >= 31536000) { // 1 year
+                timeText = `${(estimatedSeconds / 31536000).toFixed(1)} years`;
+            } else if (estimatedSeconds >= 2592000) { // 1 month
+                timeText = `${(estimatedSeconds / 2592000).toFixed(1)} months`;
+            } else if (estimatedSeconds >= 86400) { // 1 day
+                timeText = `${(estimatedSeconds / 86400).toFixed(1)} days`;
+            } else if (estimatedSeconds >= 3600) { // 1 hour
+                timeText = `${(estimatedSeconds / 3600).toFixed(1)} hours`;
+            } else if (estimatedSeconds >= 60) { // 1 minute
+                timeText = `${(estimatedSeconds / 60).toFixed(1)} minutes`;
+            } else {
+                timeText = `${Math.round(estimatedSeconds)} seconds`;
+            }
+            
+            // Format the rate for display
+            let rateText;
+            if (currentRate) {
+                if (currentRate >= 1000) {
+                    rateText = `${(currentRate / 1000).toFixed(0)}k`;
+                } else {
+                    rateText = Math.round(currentRate).toLocaleString();
+                }
+                rateText += ' keys/sec';
+            } else {
+                rateText = '10k keys/sec';
+            }
+            
+            // Determine difficulty level
+            let difficultyLevel, difficultyColor;
+            if (expectedAttempts <= 1000) {
+                difficultyLevel = "Very Easy";
+                difficultyColor = "#27ae60";
+            } else if (expectedAttempts <= 100000) {
+                difficultyLevel = "Easy";
+                difficultyColor = "#2ecc71";
+            } else if (expectedAttempts <= 10000000) {
+                difficultyLevel = "Moderate";
+                difficultyColor = "#f39c12";
+            } else if (expectedAttempts <= 1000000000) {
+                difficultyLevel = "Hard";
+                difficultyColor = "#e67e22";
+            } else if (expectedAttempts <= 100000000000) {
+                difficultyLevel = "Very Hard";
+                difficultyColor = "#e74c3c";
+            } else {
+                difficultyLevel = "Extreme";
+                difficultyColor = "#8e44ad";
+            }
+            
+            prefixDifficulty.innerHTML = `
+                <div style="margin-bottom: 8px;">
+                    <span style="font-weight: 600; color: ${difficultyColor};">${difficultyLevel}</span> - 
+                    Expected to find in ~${attemptsText} attempts
+                </div>
+                <div style="font-size: 13px; color: #7f8c8d;">
+                    Estimated time: ~${timeText} (at ${rateText})
+                </div>
+                <div style="font-size: 13px; color: #7f8c8d;">
+                    Probability: 1 in ${expectedAttempts.toLocaleString()} (${(probability * 100).toFixed(6)}%)
+                </div>
+            `;
+            
+            prefixInfo.style.display = 'block';
+        }
+
+        // Update difficulty estimate when user types
+        targetPrefixInput.addEventListener('input', (e) => {
+            const prefix = e.target.value.trim().toUpperCase();
+            if (/^[0-9A-F]*$/.test(prefix)) {
+                updateDifficultyEstimate(prefix);
+                checkReservedPrefix(prefix);
+            } else {
+                // If invalid hex characters, disable button
+                generateBtn.disabled = true;
+                // Also check reserved prefix in case user is typing
+                checkReservedPrefix(prefix);
+            }
+            
+            // If prefix is empty, disable button
+            if (prefix.length === 0) {
+                generateBtn.disabled = true;
+            }
+        });
+
+        // Check for reserved prefixes and show warning, disable button if reserved
+        function checkReservedPrefix(prefix) {
+            const existingWarning = document.getElementById('reservedPrefixWarning');
+            if (existingWarning) {
+                existingWarning.remove();
+            }
+
+            // Check if prefix is reserved (starts with 00 or FF)
+            const isReserved = prefix.length >= 2 && (prefix.startsWith('00') || prefix.startsWith('FF'));
+            
+            if (isReserved) {
+                const warningDiv = document.createElement('div');
+                warningDiv.id = 'reservedPrefixWarning';
+                warningDiv.style.cssText = 'background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 12px; margin-top: 10px; color: #856404; font-size: 14px;';
+                warningDiv.innerHTML = `<strong>⚠️ Warning:</strong> Prefixes starting with "00" or "FF" are reserved by MeshCore and may cause unexpected behavior in the network.`;
+                
+                const prefixInfo = document.getElementById('prefixInfo');
+                if (prefixInfo && prefixInfo.style.display !== 'none') {
+                    prefixInfo.parentNode.insertBefore(warningDiv, prefixInfo.nextSibling);
+                } else {
+                    targetPrefixInput.parentNode.appendChild(warningDiv);
+                }
+                
+                // Disable the Generate Key button
+                generateBtn.disabled = true;
+            } else {
+                // Enable the Generate Key button if prefix is valid and not reserved
+                // Only enable if prefix is not empty, valid hex, and within length limit
+                if (prefix.length > 0 && /^[0-9A-F]+$/.test(prefix) && prefix.length <= 8) {
+                    generateBtn.disabled = false;
+                } else if (prefix.length === 0) {
+                    // Disable if empty
+                    generateBtn.disabled = true;
+                }
+            }
+        }
+
+        // Form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Check if Web Crypto API is available
+            if (typeof crypto === 'undefined' || typeof crypto.subtle === 'undefined') {
+                showError('Error: Web Crypto API is not available in this browser.');
+                return;
+            }
+
+            const targetPrefix = targetPrefixInput.value.trim().toUpperCase();
+
+            // Validation
+            if (!targetPrefix) {
+                showError('Please enter a target prefix.');
+                return;
+            }
+
+            if (targetPrefix.length === 0 || targetPrefix.length > 8) {
+                showError('Prefix must be between 1 and 8 characters long.');
+                return;
+            }
+
+            if (!/^[0-9A-F]+$/.test(targetPrefix)) {
+                showError('Prefix must contain only hexadecimal characters (0-9, A-F).');
+                return;
+            }
+
+            // Check for reserved prefixes
+            if (targetPrefix.startsWith('00') || targetPrefix.startsWith('FF')) {
+                showError('Prefixes starting with "00" or "FF" are reserved by MeshCore and cannot be used.');
+                return;
+            }
+
+
+            // Hide previous results and errors
+            hideError();
+            resultContainer.style.display = 'none';
+
+            // Show progress
+            progressContainer.style.display = 'block';
+            generateBtn.disabled = true;
+            stopBtn.disabled = false;
+            stopBtn.textContent = 'Stop';
+            stopBtn.className = 'btn btn-secondary';
+
+            try {
+                // Initialize the key generator (loads the Ed25519 library)
+                document.getElementById('progressText').textContent = 'Loading Ed25519 library...';
+                await keyGenerator.initialize();
+                
+                // Update progress text with parallelization method
+                if (keyGenerator.generationMode === 'js-fallback') {
+                    document.getElementById('progressText').textContent = 'Using pure JavaScript fallback mode...';
+                } else if (keyGenerator.workers.length > 0) {
+                    document.getElementById('progressText').textContent = `Initialized ${keyGenerator.workers.length} WASM workers for parallel generation...`;
+                }
+                const result = await keyGenerator.generateVanityKey(
+                    targetPrefix, 
+                    targetPrefix.length,
+                    (progress) => {
+                        document.getElementById('attemptsCount').textContent = progress.attempts.toLocaleString();
+                        document.getElementById('timeElapsed').textContent = `${progress.elapsed.toFixed(1)}s`;
+                        document.getElementById('keysPerSecond').textContent = progress.rate.toLocaleString();
+                        document.getElementById('progressFill').style.width = `${progress.progressPercentage}%`;
+                        
+                        let progressLine = `${progress.attempts.toLocaleString()} attempts | ${progress.rate.toLocaleString()} keys/sec | ${progress.elapsed.toFixed(1)}s elapsed [${progress.method}]`;
+                        if (progress.perfStats) {
+                            const perf = progress.perfStats;
+                            progressLine += ` | msg ${perf.msgPerSec.toFixed(1)}/s | avg batch ${Math.round(perf.avgBatch)} | wasm ${(perf.wasmShare * 100).toFixed(1)}%`;
+                        }
+                        document.getElementById('progressText').textContent = progressLine;
+                    },
+                    (rate) => {
+                        updateDifficultyEstimate(targetPrefix, rate);
+                    }
+                );
+                
+                if (result) {
+                    displayResult(result, targetPrefix);
+                } else {
+                    showError('Key generation was stopped.');
+                }
+            } catch (error) {
+                showError(`Error generating key: ${error.message}`);
+            } finally {
+                progressContainer.style.display = 'none';
+                generateBtn.disabled = false;
+                stopBtn.disabled = false;  // Enable the button for "Generate Another"
+                stopBtn.textContent = 'Generate Another';
+                stopBtn.className = 'btn btn-secondary';
+            }
+        });
+
+        // Stop/Generate Another button
+        stopBtn.addEventListener('click', () => {
+            if (stopBtn.textContent === 'Stop') {
+                // Currently generating - stop the process
+                keyGenerator.stop();
+                stopBtn.disabled = true;
+            } else {
+                // Currently idle - generate another key
+                resultContainer.style.display = 'none';
+                form.dispatchEvent(new Event('submit'));
+            }
+        });
+
+        // Download button
+        downloadBtn.addEventListener('click', () => {
+            const seed = document.getElementById('seedHex').textContent;
+            const publicKey = document.getElementById('publicKey').textContent;
+            const privateKey = document.getElementById('privateKey').textContent;
+            const targetPrefix = targetPrefixInput.value.trim().toUpperCase();
+            
+            const meshcoreData = {
+                seed: seed,
+                public_key: publicKey,
+                private_key: privateKey
+            };
+
+            const blob = new Blob([JSON.stringify(meshcoreData, null, 2)], {
+                type: 'application/json'
+            });
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `meshcore_${targetPrefix}_${Date.now()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+
+
+        function displayResult(result, targetPrefix) {
+            document.getElementById('seedHex').textContent = result.seed;
+            document.getElementById('publicKey').textContent = result.publicKey;
+            document.getElementById('privateKey').textContent = result.privateKey;
+            document.getElementById('attemptsCount').textContent = result.attempts.toLocaleString();
+            document.getElementById('timeElapsed').textContent = `${result.timeElapsed.toFixed(1)}s`;
+            document.getElementById('keysPerSecond').textContent = Math.round(result.attempts / result.timeElapsed).toLocaleString();
+            
+            // Show the static validation status
+            document.getElementById('validationStatusContainer').style.display = 'block';
+            
+            resultContainer.style.display = 'block';
+            resultContainer.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function showError(message) {
+            errorContainer.textContent = message;
+            errorContainer.style.display = 'block';
+        }
+
+        function hideError() {
+            errorContainer.style.display = 'none';
+        }
+
+        // Modal functionality
+        importInfoBtn.addEventListener('click', () => {
+            importModal.style.display = 'block';
+        });
+
+        closeModal.addEventListener('click', () => {
+            importModal.style.display = 'none';
+        });
+
+        // Close modal when clicking outside of it
+        window.addEventListener('click', (event) => {
+            if (event.target === importModal) {
+                importModal.style.display = 'none';
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && importModal.style.display === 'block') {
+                importModal.style.display = 'none';
+            }
+        });
+
+        // Function to get URL parameters
+        function getUrlParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // Pre-populate prefix from URL parameter
+        const urlPrefix = getUrlParameter('prefix');
+        if (urlPrefix) {
+            const cleanPrefix = urlPrefix.trim().toUpperCase();
+            if (/^[0-9A-F]+$/.test(cleanPrefix) && cleanPrefix.length <= 8) {
+                targetPrefixInput.value = cleanPrefix;
+                updateDifficultyEstimate(cleanPrefix);
+                checkReservedPrefix(cleanPrefix);
+            }
+        } else {
+            // If no prefix on load, disable the button
+            generateBtn.disabled = true;
+        }
+
+        // Initialize the form
+        targetPrefixInput.focus();
+    </script>
+</body>
+</html>

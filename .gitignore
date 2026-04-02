@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+._*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Rust/WASM build intermediates (keep wasm/pkg/*.wasm and *.js tracked for static serving)
+wasm/target/
+
+# wasm-pack artifacts not needed at runtime
+wasm/pkg/.gitignore
+wasm/pkg/package.json
+wasm/pkg/*.d.ts
+
+# Environment variables
+.env
+.env.local
+.env.*.local
