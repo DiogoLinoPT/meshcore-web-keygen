@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeshCore JSON API - Client Example</title>
+    <script>
+        // Check for saved theme preference
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        } else {
+            // Check system preference
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --bg-main: #f8f9fa;
+            --bg-card: #ffffff;
+            --text-main: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --accent-primary: #f05e16; /* MeshCore Orange */
+            --accent-hover: #d24e10;
+            --accent-glow: rgba(240, 94, 22, 0.3);
+            --border-color: #e0e0e0;
+            --input-bg: #ffffff;
+            --input-focus: #f05e16;
+            --header-bg: #e2e8f0;
+            --header-text: #1a202c;
+            --success-color: #27ae60;
+            --error-bg: #fee;
+            --error-color: #c0392b;
+            --info-bg: #e8f4fd;
+            --info-color: #2980b9;
+            --code-bg: #f1f5f9;
+        }
+
+        [data-theme="dark"] {
+            --bg-main: #111113;
+            --bg-card: #1a1a1c;
+            --text-main: #f8f9fa;
+            --text-secondary: #a0aec0;
+            --accent-primary: #f05e16;
+            --accent-hover: #ff7635;
+            --accent-glow: rgba(240, 94, 22, 0.5);
+            --border-color: #2d3748;
+            --input-bg: #2d3748;
+            --input-focus: #f05e16;
+            --header-bg: #1a1a1c;
+            --header-text: #f8f9fa;
+            --success-color: #4ade80;
+            --error-bg: #4a1d1d;
+            --error-color: #f87171;
+            --info-bg: #1e3a5f;
+            --info-color: #60a5fa;
+            --code-bg: #2d3748;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 20px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto 40px auto;
+            background: var(--bg-card);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            transition: background 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        [data-theme="dark"] .container {
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .header {
+            background: var(--header-bg);
+            color: var(--header-text);
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            border-bottom: 2px solid var(--accent-primary);
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .theme-switch-wrapper {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            z-index: 10;
+        }
+        
+        .theme-icon {
+            font-size: 0.9em;
+            line-height: 1;
+            transition: opacity 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .theme-switch {
+            display: inline-block;
+            position: relative;
+            width: 36px;
+            height: 18px;
+        }
+
+        .theme-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .theme-switch .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--input-bg);
+            transition: .3s;
+            border-radius: 18px;
+            border: 1px solid var(--border-color);
+        }
+
+        .theme-switch .slider:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 2px;
+            bottom: 2px;
+            background-color: var(--text-main);
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        .theme-switch input:checked + .slider {
+            background-color: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .theme-switch input:checked + .slider:before {
+            transform: translateX(18px);
+            background-color: white;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        /* Client specific styles */
+        .page-subtitle {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--accent-primary);
+            font-size: 1.4em;
+            font-weight: 600;
+        }
+
+        .panel {
+            background-color: var(--bg-main);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-main);
+            font-size: 0.95em;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            background: var(--input-bg);
+            color: var(--text-main);
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"][readonly] {
+            cursor: pointer;
+            border-color: var(--border-color);
+            opacity: 0.9;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--input-focus);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .hex-input {
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            font-size: 14px !important;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-buttons-wrapper {
+            position: absolute;
+            bottom: 15px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 10;
+        }
+
+        .nav-button {
+            background: rgba(45, 55, 72, 0.5);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 4px 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 11px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-button:hover {
+            background: var(--input-bg);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            text-decoration: none;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 20px;
+        }
+
+        .footer a {
+            color: var(--text-main);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer a:hover {
+            color: var(--accent-primary);
+        }
+
+        .panel h2 {
+            margin-top: 0;
+            font-size: 1.25em;
+            margin-bottom: 16px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .scenarios-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .scenario-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 16px;
+            transition: all 0.2s ease;
+        }
+
+        .scenario-item:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .scenario-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .scenario-title {
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--text-main);
+        }
+
+        .scenario-tag {
+            background-color: var(--border-color);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: var(--text-main);
+            display: inline-block;
+            margin-top: 4px;
+            margin-right: 4px;
+        }
+
+        .btn {
+            background-color: var(--accent-primary);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+        }
+
+        .btn:hover:not(:disabled) {
+            background-color: var(--accent-hover);
+        }
+
+        .btn:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        .btn:disabled {
+            background-color: var(--border-color);
+            color: var(--text-secondary);
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        /* Results / Status Area */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            background-color: var(--border-color);
+            color: var(--text-secondary);
+            margin-left: auto;
+        }
+
+        .status-badge.running {
+            background-color: var(--info-bg);
+            color: var(--info-color);
+        }
+
+        .status-badge.success {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .loader {
+            width: 12px;
+            height: 12px;
+            border: 2px solid currentColor;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            animation: rotation 1s linear infinite;
+            display: none;
+        }
+
+        .status-badge.running .loader { display: inline-block; }
+
+        @keyframes rotation {
+            0% { transform: rotate(0deg) }
+            100% { transform: rotate(360deg) }
+        }
+
+        /* IFrame Container */
+        .iframe-container {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #111;
+            height: 140px;
+            position: relative;
+        }
+
+        .iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        /* Code Snippet & Formatters */
+        pre.code-snippet, .result-data {
+            background-color: var(--input-bg);
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            margin: 0;
+            color: var(--text-main);
+            line-height: 1.5;
+        }
+
+        .result-data {
+            margin-top: 10px;
+            display: none;
+        }
+        
+        [data-theme="dark"] .json-key { color: #9cdcfe; }
+        [data-theme="light"] .json-key { color: #0451a5; }
+        
+        [data-theme="dark"] .json-string { color: #ce9178; }
+        [data-theme="light"] .json-string { color: #a31515; }
+        
+        [data-theme="dark"] .json-number { color: #b5cea8; }
+        [data-theme="light"] .json-number { color: #098658; }
+        
+        [data-theme="dark"] .json-keyword { color: #569cd6; }
+        [data-theme="light"] .json-keyword { color: #0000ff; }
+        
+        [data-theme="dark"] .code-comment { color: #6a9955; }
+        [data-theme="light"] .code-comment { color: #008000; }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+            .content {
+                padding: 20px;
+            }
+            .scenario-item {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+            }
+            .header {
+                padding-top: 70px;
+            }
+            .header h1 {
+                font-size: 1.8em;
+            }
+            .btn {
+                width: 100%;
+            }
+            .nav-buttons-wrapper {
+                bottom: 10px;
+                right: 15px;
+            }
+            .nav-button {
+                padding: 4px 10px;
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Exact Header Match from generation page -->
+        <div class="header">
+            <div class="nav-buttons-wrapper">
+                <a href="./index.html" class="nav-button" title="Return to Main App">
+                    <span style="font-size: 1.2em;">⚙️</span> Key Generator
+                </a>
+            </div>
+            <div class="theme-switch-wrapper" title="Toggle Light/Dark Theme">
+                <span class="theme-icon light-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </span>
+                <label class="theme-switch" for="themeToggle">
+                    <input type="checkbox" id="themeToggle" />
+                    <span class="slider"></span>
+                </label>
+                <span class="theme-icon dark-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </span>
+            </div>
+            
+            <h1>MeshCore Key Generator</h1>
+            <p>Generate custom Ed25519 keys for MeshCore</p>
+        </div>
+
+        <div class="content">
+            <h2 class="page-subtitle">JSON API - Web Client Example</h2>
+            
+            <p style="color: var(--text-secondary); margin-bottom: 25px;">
+                This page demonstrates how to embed and communicate with <code>json-api.html</code> using the native <code>postMessage</code> event protocol.
+            </p>
+            
+            <div class="panel">
+                <h2>1. Choose a Scenario</h2>
+                <ul class="scenarios-list">
+                    <li class="scenario-item">
+                        <div class="scenario-info">
+                            <div class="scenario-title">Scenario Normal</div>
+                            <div>
+                                <span class="scenario-tag">Prefix: A1</span>
+                            </div>
+                        </div>
+                        <button class="btn exec-btn" data-prefix="A1" data-exclude="">Run Scenario</button>
+                    </li>
+                    
+                    <li class="scenario-item">
+                        <div class="scenario-info">
+                            <div class="scenario-title">Scenario with Basic Exclusions</div>
+                            <div>
+                                <span class="scenario-tag">Prefix: 01</span>
+                                <span class="scenario-tag">Exclude: 01A, 01B</span>
+                            </div>
+                        </div>
+                        <button class="btn exec-btn" data-prefix="01" data-exclude="01A,01B">Run Scenario</button>
+                    </li>
+
+                    <li class="scenario-item">
+                        <div class="scenario-info">
+                            <div class="scenario-title">Scenario Complex target</div>
+                            <div>
+                                <span class="scenario-tag">Prefix: B132</span>
+                                <span class="scenario-tag">Exclude: B1325</span>
+                            </div>
+                        </div>
+                        <button class="btn exec-btn" data-prefix="B132" data-exclude="B1325">Run Scenario</button>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="panel">
+                <div style="display: flex; align-items: center; flex-wrap: wrap; margin-bottom: 16px;">
+                    <h2 style="margin: 0;">2. Live Results & Engine View</h2>
+                    <span id="statusIndicator" class="status-badge">Idle</span>
+                </div>
+                
+                <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 10px;">Iframe executing <code>json-api.html</code>:</p>
+                <div class="iframe-container">
+                    <iframe id="apiFrame" src="json-api.html"></iframe>
+                </div>
+
+                <div id="resultForm" style="display: none; margin-top: 25px;">
+                    <div class="form-group">
+                        <label>Public Key (MeshCore Node Identifier)</label>
+                        <input type="text" id="resPubKey" readonly class="hex-input" onclick="this.select()">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Private Key</label>
+                        <input type="text" id="resPrivKey" readonly class="hex-input" onclick="this.select()">
+                    </div>
+                    
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 100px;">
+                            <label>Prefix Matched</label>
+                            <input type="text" id="resPrefix" readonly>
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 100px;">
+                            <label>Tested Keys</label>
+                            <input type="text" id="resAttempts" readonly>
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 100px;">
+                            <label>Time Taken</label>
+                            <input type="text" id="resTime" readonly>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>3. How it Works (Client Implementation Code)</h2>
+                <pre class="code-snippet">
+<span class="code-comment">// 1. Listen for messages from the embedded iframe</span>
+<span class="json-keyword">window</span>.addEventListener(<span class="json-string">'message'</span>, (<span class="json-keyword">event</span>) => {
+    <span class="json-keyword">const</span> data = <span class="json-keyword">event</span>.data;
+    
+    <span class="json-keyword">if</span> (data && data.type === <span class="json-string">'meshcore-api'</span>) {
+        <span class="json-keyword">if</span> (data.error) {
+            <span class="json-keyword">console</span>.error(<span class="json-string">"API responded with error:"</span>, data.error);
+        } <span class="json-keyword">else</span> {
+            <span class="json-keyword">console</span>.log(<span class="json-string">"Success! Received Key:"</span>, data.data);
+            <span class="code-comment">// Ready via data.data.publicKey & data.data.privateKey</span>
+        }
+    }
+});
+
+<span class="code-comment">// 2. Trigger the generation inside the iframe asynchronously</span>
+<span class="json-keyword">const</span> apiFrame = <span class="json-keyword">document</span>.getElementById(<span class="json-string">'apiFrame'</span>);
+apiFrame.contentWindow.postMessage({
+    type: <span class="json-string">'meshcore-api-request'</span>,
+    prefix: <span class="json-string">'01'</span>,
+    exclude: [<span class="json-string">'01A'</span>, <span class="json-string">'01B'</span>]
+}, <span class="json-string">'*'</span>);</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <div style="margin-bottom: 5px;">💻 <a href="https://github.com/DiogoLinoPT/meshcore-web-keygen" target="_blank" rel="noopener" style="text-decoration: underline;">Source code at Github</a></div>
+        <div style="font-size: 0.9em; opacity: 0.8;">Based on the original concept by <a href="https://github.com/agessaman/meshcore-web-keygen" target="_blank" rel="noopener">agessaman</a>.</div>
+    </div>
+
+    <script>
+        // Setup Theme Toggle
+        const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+        const currentTheme = localStorage.getItem('theme');
+
+        if (currentTheme) {
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            if (currentTheme === 'dark') {
+                toggleSwitch.checked = true;
+            }
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            toggleSwitch.checked = true;
+        }
+
+        function switchTheme(e) {
+            if (e.target.checked) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+            }    
+        }
+
+        toggleSwitch.addEventListener('change', switchTheme, false);
+
+
+        // JSON API Client Logic
+        const apiFrame = document.getElementById('apiFrame');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const resultForm = document.getElementById('resultForm');
+        const execButtons = document.querySelectorAll('.exec-btn');
+
+        // Setup event listeners for the scenario buttons
+        execButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Disable all buttons while running
+                execButtons.forEach(b => b.disabled = true);
+                
+                // Update UI state
+                statusIndicator.className = 'status-badge running';
+                statusIndicator.innerHTML = '<span class="loader"></span> Generating...';
+                
+                resultForm.style.display = 'none';
+
+                // Grab scenario data config
+                const targetPrefix = btn.getAttribute('data-prefix');
+                const rawExclude = btn.getAttribute('data-exclude');
+                const excludeArray = rawExclude ? rawExclude.split(',') : [];
+
+                // Dispatch message to iframe
+                apiFrame.contentWindow.postMessage({
+                    type: 'meshcore-api-request',
+                    prefix: targetPrefix,
+                    exclude: excludeArray
+                }, '*');
+            });
+        });
+
+        // Listen for the response from the iframe
+        window.addEventListener('message', (event) => {
+            const payload = event.data;
+            
+            if (payload && payload.type === 'meshcore-api') {
+                execButtons.forEach(b => b.disabled = false);
+
+                if (payload.error) {
+                    statusIndicator.className = 'status-badge error';
+                    statusIndicator.innerHTML = '⚠️ Error';
+                    alert('Error from API: ' + payload.error);
+                } else if (payload.data) {
+                    statusIndicator.className = 'status-badge success';
+                    statusIndicator.innerHTML = '✓ Success';
+                    
+                    // Fill input boxes with specific keys
+                    document.getElementById('resPubKey').value = payload.data.publicKey || '';
+                    document.getElementById('resPrivKey').value = payload.data.privateKey || '';
+                    document.getElementById('resPrefix').value = payload.data.prefix || '';
+                    document.getElementById('resAttempts').value = (payload.data.attempts || 0).toLocaleString();
+                    document.getElementById('resTime').value = (payload.data.timeElapsedSeconds || 0) + 's';
+                    
+                    resultForm.style.display = 'block';
+                    
+                    // Smooth scroll to results
+                    resultForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
+        });
+    </script>
+</body>
+</html>

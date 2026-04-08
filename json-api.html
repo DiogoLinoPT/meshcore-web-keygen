@@ -35,7 +35,7 @@
             }
         }
 
-        async function processGeneration(prefix) {
+        async function processGeneration(prefix, exclusions = []) {
             if (!prefix || prefix.length < 1 || prefix.length > 8 || !/^[0-9A-F]+$/i.test(prefix)) {
                 return logError("Invalid prefix. Must be 1-8 hex characters.");
             }
@@ -43,8 +43,13 @@
                 return logError("Reserved prefix. Cannot start with 00 or FF.");
             }
 
+            window.excludedPrefixesArray = exclusions.map(e => e.toUpperCase());
+
             try {
                 outputDiv.textContent = `Starting generation for prefix: ${prefix}...`;
+                if (exclusions.length > 0) {
+                    outputDiv.textContent += ` (Excluding: ${exclusions.join(', ')})`;
+                }
                 
                 await keyGenerator.initialize();
                 
@@ -55,6 +60,7 @@
                 if (result) {
                     const jsonResult = {
                         prefix: prefix.toUpperCase(),
+                        excludedPrefixes: window.excludedPrefixesArray,
                         seed: result.seed,
                         publicKey: result.publicKey,
                         privateKey: result.privateKey,
@@ -79,11 +85,17 @@
             }
         }
 
-        // Mode 1: URL Parameter (?prefix=F8)
+        // Mode 1: URL Parameter (?prefix=F8&exclude=FA,FB)
         const urlParams = new URLSearchParams(window.location.search);
         const prefixParam = urlParams.get('prefix');
+        const excludeParam = urlParams.get('exclude');
+        let parsedExclusions = [];
+        if (excludeParam) {
+            parsedExclusions = excludeParam.split(',').map(e => e.trim()).filter(e => /^[0-9A-F]+$/i.test(e));
+        }
+
         if (prefixParam) {
-            processGeneration(prefixParam);
+            processGeneration(prefixParam, parsedExclusions);
         } else {
             outputDiv.textContent = "Waiting for configuration. Add ?prefix=XX to the URL, or send a postMessage.";
         }
@@ -92,10 +104,11 @@
         window.addEventListener('message', (event) => {
             if (event.data && event.data.type === 'meshcore-api-request') {
                 const requestedPrefix = event.data.prefix;
+                const requestedExclusions = event.data.exclude || [];
                 if (keyGenerator.isRunning) {
                     keyGenerator.stop();
                 }
-                processGeneration(requestedPrefix);
+                processGeneration(requestedPrefix, requestedExclusions);
             }
         });
     </script>

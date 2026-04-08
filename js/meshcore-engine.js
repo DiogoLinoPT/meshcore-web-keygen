@@ -288,7 +288,8 @@ export class MeshCoreKeyGenerator {
                     targetBatchMs: this.targetBatchMs,
                     minBatchSize: this.minBatchSize,
                     maxBatchSize: this.maxBatchSize,
-                    progressIntervalMs: this.progressIntervalMs
+                    progressIntervalMs: this.progressIntervalMs,
+                    excludedPrefixes: window.excludedPrefixesArray || []
                 });
             }
         });
@@ -299,6 +300,7 @@ export class MeshCoreKeyGenerator {
         const fallbackBatchSize = Math.max(64, Math.floor(this.batchSize / 2));
         return this.jsFallbackModule.searchVanityKey({
             targetPrefix,
+            excludedPrefixes: window.excludedPrefixesArray || [],
             batchSize: fallbackBatchSize,
             getNobleEd25519: () => nobleEd25519,
             shouldStop: () => this.stopRequested || !this.isRunning,

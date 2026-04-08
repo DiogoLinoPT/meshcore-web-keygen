@@ -89,6 +89,7 @@ export async function searchVanityKey(options) {
 
     const normalizedPrefix = targetPrefix.toUpperCase();
     const effectiveBatchSize = Math.max(32, batchSize | 0);
+    const exclusions = options.excludedPrefixes || [];
 
     while (!shouldStop()) {
         for (let i = 0; i < effectiveBatchSize; i++) {
@@ -107,7 +108,16 @@ export async function searchVanityKey(options) {
             }
 
             if (keypair.publicKey.startsWith(normalizedPrefix)) {
-                return keypair;
+                let excluded = false;
+                for (const exc of exclusions) {
+                    if (keypair.publicKey.startsWith(exc)) {
+                        excluded = true;
+                        break;
+                    }
+                }
+                if (!excluded) {
+                    return keypair;
+                }
             }
         }
 

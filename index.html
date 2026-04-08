@@ -219,6 +219,94 @@
             text-transform: uppercase;
         }
 
+        .exclusions-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            cursor: pointer;
+            margin-top: 15px;
+            user-select: none;
+            transition: color 0.3s ease;
+        }
+        .exclusions-toggle:hover {
+            color: var(--text-main);
+        }
+        .exclusions-container {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, margin-top 0.3s ease, opacity 0.3s ease;
+            opacity: 0;
+        }
+        .exclusions-container.active {
+            max-height: 250px;
+            margin-top: 15px;
+            opacity: 1;
+            overflow-y: auto;
+        }
+        .tag-input-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            align-content: flex-start;
+            gap: 8px;
+            padding: 8px;
+            background: var(--input-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            min-height: 42px;
+            max-height: 150px;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+            margin-top: 8px;
+        }
+        .tag-input-wrapper:focus-within {
+            border-color: var(--input-focus);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        .exclusion-tag {
+            background: var(--accent-primary);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            height: 22px;
+        }
+        .exclusion-tag .remove-tag {
+            cursor: pointer;
+            font-weight: bold;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            font-size: 9px;
+        }
+        .exclusion-tag .remove-tag:hover {
+            background: rgba(255,255,255,0.4);
+        }
+        .tag-input {
+            border: none;
+            outline: none;
+            background: transparent;
+            color: var(--text-main);
+            flex: 1;
+            min-width: 100px;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            padding: 0 4px;
+            height: 22px;
+            font-size: 0.85em;
+        }
+
         .button-group {
             display: flex;
             gap: 15px;
@@ -527,11 +615,17 @@
             border: 1px solid var(--border-color);
         }
 
-        .nav-button {
+        .nav-buttons-wrapper {
             position: absolute;
             bottom: 15px;
             right: 20px;
-            left: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 10;
+        }
+
+        .nav-button {
             background: rgba(45, 55, 72, 0.5);
             color: var(--text-main);
             border: 1px solid var(--border-color);
@@ -543,9 +637,9 @@
             font-weight: 600;
             display: flex;
             align-items: center;
+            justify-content: flex-end;
             gap: 4px;
             transition: all 0.3s ease;
-            z-index: 10;
         }
 
         .nav-button:hover {
@@ -596,10 +690,11 @@
                 top: 15px;
                 right: 15px;
             }
-            .nav-button {
+            .nav-buttons-wrapper {
                 bottom: 10px;
                 right: 15px;
-                left: auto;
+            }
+            .nav-button {
                 padding: 4px 10px;
                 font-size: 10px;
             }
@@ -609,9 +704,14 @@
 <body>
     <div class="container">
         <div class="header">
-            <a href="./instructions/" class="nav-button" title="View detailed instructions">
-                <span style="font-size: 1.2em;">📖</span> Step-by-step Guide
-            </a>
+            <div class="nav-buttons-wrapper">
+                <a href="./instructions/" class="nav-button" title="View detailed instructions">
+                    <span style="font-size: 1.2em;">📖</span> Step-by-step Guide
+                </a>
+                <a href="./client-example.html" class="nav-button" title="View API Client Example">
+                    <span style="font-size: 1.2em;">💻</span> Web Client Example
+                </a>
+            </div>
             <h1>MeshCore Key Generator</h1>
             <p>Generate custom Ed25519 keys for MeshCore</p>
             <div class="theme-switch-wrapper" title="Toggle Light/Dark Theme">
@@ -716,6 +816,19 @@
                     <div id="prefixInfo" style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea; display: none;">
                         <div style="font-weight: 600; color: #2c3e50; margin-bottom: 5px;">📊 Difficulty Estimate</div>
                         <div id="prefixDifficulty" style="font-size: 14px; color: #34495e;"></div>
+                    </div>
+
+                    <div class="exclusions-toggle" id="exclusionsToggle">
+                        <span id="exclusionsIcon">▶</span> Advanced: Exclude specific prefixes
+                    </div>
+                    <div class="exclusions-container" id="exclusionsContainer">
+                        <label style="font-size: 0.95em;">Prefixes to completely ignore:</label>
+                        <div class="tag-input-wrapper" id="tagInputWrapper">
+                            <input type="text" class="tag-input" id="tagInput" placeholder="Enter prefix and press Space or Enter">
+                        </div>
+                        <small style="color: var(--text-secondary); margin-top: 5px; display: block;">
+                            If a generated key matches your target prefix but ALSO starts with one of these blocked prefixes, it will be discarded.
+                        </small>
                     </div>
                 </div>
 
@@ -835,6 +948,71 @@
     </script>
     <script type="module">
         import { MeshCoreKeyGenerator } from './js/meshcore-engine.js';
+
+        // Initialize exclusion tags
+        window.excludedPrefixesArray = [];
+        const exclusionsToggle = document.getElementById('exclusionsToggle');
+        const exclusionsContainer = document.getElementById('exclusionsContainer');
+        const exclusionsIcon = document.getElementById('exclusionsIcon');
+        const tagInputWrapper = document.getElementById('tagInputWrapper');
+        const tagInput = document.getElementById('tagInput');
+
+        exclusionsToggle.addEventListener('click', () => {
+            const isActive = exclusionsContainer.classList.toggle('active');
+            exclusionsIcon.textContent = isActive ? '▼' : '▶';
+        });
+
+        tagInputWrapper.addEventListener('click', (e) => {
+            if (e.target === tagInputWrapper) tagInput.focus();
+        });
+
+        function renderTags() {
+            const existingTags = tagInputWrapper.querySelectorAll('.exclusion-tag');
+            existingTags.forEach(tag => tag.remove());
+            
+            window.excludedPrefixesArray.forEach((prefix, index) => {
+                const tagEl = document.createElement('span');
+                tagEl.className = 'exclusion-tag';
+                tagEl.innerHTML = `${prefix} <span class="remove-tag" data-index="${index}">✕</span>`;
+                tagInputWrapper.insertBefore(tagEl, tagInput);
+            });
+            
+            document.querySelectorAll('.remove-tag').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const idx = parseInt(e.currentTarget.getAttribute('data-index'));
+                    window.excludedPrefixesArray.splice(idx, 1);
+                    renderTags();
+                });
+            });
+        }
+
+        function addTag(value) {
+            value = value.trim().toUpperCase();
+            if (value && /^[0-9A-F]+$/.test(value) && !window.excludedPrefixesArray.includes(value)) {
+                window.excludedPrefixesArray.push(value);
+            }
+            tagInput.value = '';
+            renderTags();
+        }
+
+        tagInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ' || e.key === ',') {
+                e.preventDefault();
+                addTag(e.target.value);
+            } else if (e.key === 'Backspace' && tagInput.value === '' && window.excludedPrefixesArray.length > 0) {
+                window.excludedPrefixesArray.pop();
+                renderTags();
+            }
+        });
+        
+        tagInput.addEventListener('blur', () => {
+            if(tagInput.value) addTag(tagInput.value);
+        });
+
+        // Prevent Enter inside tag input from submitting the generation form
+        tagInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') e.preventDefault();
+        });
 
         // Global key generator instance
         const keyGenerator = new MeshCoreKeyGenerator();
@@ -1245,6 +1423,23 @@
         } else {
             // If no prefix on load, disable the button
             generateBtn.disabled = true;
+        }
+
+        // Pre-populate exclusions from URL parameter
+        const urlExclude = getUrlParameter('exclude');
+        if (urlExclude) {
+            const exclusions = urlExclude.split(',');
+            exclusions.forEach(exc => {
+                const cleanExc = exc.trim().toUpperCase();
+                if (/^[0-9A-F]+$/.test(cleanExc)) {
+                    addTag(cleanExc);
+                }
+            });
+            
+            if (window.excludedPrefixesArray.length > 0) {
+                document.getElementById('exclusionsContainer').classList.add('active');
+                document.getElementById('exclusionsIcon').textContent = '▼';
+            }
         }
 
         // Initialize the form

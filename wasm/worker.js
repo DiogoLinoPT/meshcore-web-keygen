@@ -105,28 +105,47 @@ async function runSearchLoop(config) {
         attemptedTotal += decoded.attempted;
         batchCount += 1;
 
-        // If there is a match, stop this worker loop immediately.
+        let validMatch = null;
         if (decoded.results.length > 0) {
-            const attemptedDelta = attemptedTotal - reportedAttempted;
-            reportedAttempted = attemptedTotal;
-            self.postMessage({
-                type: 'match',
-                jobId,
-                result: decoded.results[0],
-                attemptedDelta,
-                attemptedTotal,
-                metrics: {
-                    batchSize,
-                    wasmMs,
-                    batchWallMs,
-                    overheadMs,
-                    batchCount,
-                    totalWasmMs,
-                    totalBatchWallMs
+            for (const r of decoded.results) {
+                let excluded = false;
+                if (config.excludedPrefixes && config.excludedPrefixes.length > 0) {
+                    const pk = r.publicKey;
+                    for (const exp of config.excludedPrefixes) {
+                        if (pk.startsWith(exp)) {
+                            excluded = true;
+                            break;
+                        }
+                    }
                 }
-            });
-            running = false;
-            break;
+                if (!excluded) {
+                    validMatch = r;
+                    break;
+                }
+            }
+
+            if (validMatch) {
+                const attemptedDelta = attemptedTotal - reportedAttempted;
+                reportedAttempted = attemptedTotal;
+                self.postMessage({
+                    type: 'match',
+                    jobId,
+                    result: validMatch,
+                    attemptedDelta,
+                    attemptedTotal,
+                    metrics: {
+                        batchSize,
+                        wasmMs,
+                        batchWallMs,
+                        overheadMs,
+                        batchCount,
+                        totalWasmMs,
+                        totalBatchWallMs
+                    }
+                });
+                running = false;
+                break;
+            }
         }
 
         const now = batchEnd;
@@ -219,7 +238,8 @@ self.onmessage = async function(e) {
             targetBatchMs: e.data.targetBatchMs ?? 16,
             minBatchSize: e.data.minBatchSize ?? 512,
             maxBatchSize: e.data.maxBatchSize ?? 65536,
-            progressIntervalMs: e.data.progressIntervalMs ?? 150
+            progressIntervalMs: e.data.progressIntervalMs ?? 150,
+            excludedPrefixes: e.data.excludedPrefixes || []
         });
     } else if (type === 'stop') {
         running = false;
