@@ -740,8 +740,7 @@
 
                 <div style="display: flex; justify-content: flex-end;">
                     <button class="btn" id="btnNext1" onclick="goToStep2()">Seguinte ➔</button>
-                    <button class="btn" id="btnNext1Mobile" style="display:none;" onclick="skipToGeneration()">Saltar
-                        para Geração ➔</button>
+                    <button class="btn" id="btnNext1Mobile" style="display:none;" onclick="skipToGeneration()">Gerar chaves ➔</button>
                 </div>
             </div>
 
@@ -889,8 +888,7 @@
                 </div>
 
                 <div style="display: flex; justify-content: space-between; margin-top: 25px;">
-                    <button class="btn btn-outline" onclick="location.reload()">🡠 Recomeçar de Novo</button>
-                    <!--<button class="btn" onclick="alert('Funcionalidade futura: descarregar .json config')">Guardar Configuração</button>-->
+                    <button class="btn btn-outline" onclick="goBackFromResults()">🡠 Voltar</button>
                 </div>
                 </div> <!-- Closing postGenResults -->
             </div>
@@ -902,7 +900,7 @@
     <div class="footer">
         <div style="margin-bottom: 5px;">💻 <a href="https://github.com/DiogoLinoPT/meshcore-web-keygen" target="_blank"
                 rel="noopener" style="text-decoration: underline;">Source code at Github</a> <span
-                style="opacity: 0.7; font-size: 0.9em; margin-left: 5px;">v1.0.0</span></div>
+                style="opacity: 0.7; font-size: 0.9em; margin-left: 5px;">v1.1.0</span></div>
         <div style="font-size: 0.9em; opacity: 0.8;">Base engine by <a
                 href="https://github.com/agessaman/meshcore-web-keygen" target="_blank" rel="noopener">agessaman</a>.
             Tailored for MeshCore Portugal.</div>
@@ -1071,6 +1069,20 @@
             }
         }
 
+        function goBackFromResults() {
+            const isMobileDevice = document.getElementById('isMobileDevice').checked;
+            
+            // Repor visibilidade para que na próxima geração o ecrã venha no formulário inicial
+            document.getElementById('postGenResults').style.display = 'none';
+            document.getElementById('preGenForm').style.display = 'block';
+
+            if (isMobileDevice) {
+                switchStep('step1');
+            } else {
+                switchStep('step2');
+            }
+        }
+
         function skipToGeneration() {
             document.getElementById('basePrefixDisplay').innerText = '0100';
             document.getElementById('chosenPrefix').value = '';
@@ -1154,9 +1166,44 @@
                 renderMatrix();
 
             } catch (err) {
-                console.error("API error:", err);
-                badge.className = 'status-badge error';
-                badge.innerHTML = `⚠️ Erro de API`;
+                console.warn("Letsmesh API error, attempting fallback...", err);
+                try {
+                    let days = 7;
+                    if (timeVal === '3d') days = 3;
+                    else if (timeVal === '1m') days = 30;
+                    
+                    const fallbackUrl = `https://www.meshcore.pt/api/nodes/list?days=${days}&excludeUsers=false&v=1`;
+                    const resFallback = await fetch(fallbackUrl);
+                    const dataFallback = await resFallback.json();
+                    
+                    let fallbackNodes = Array.isArray(dataFallback) ? dataFallback : [];
+                    
+                    const uniqueMap = new Map();
+                    for (let n of fallbackNodes) {
+                        if (n && n.public_key && n.lat !== undefined && n.long !== undefined) {
+                            uniqueMap.set(n.public_key, {
+                                public_key: n.public_key,
+                                name: n.name,
+                                location: {
+                                    latitude: n.lat,
+                                    longitude: n.long
+                                }
+                            });
+                        }
+                    }
+
+                    globalNodes = Array.from(uniqueMap.values());
+
+                    // Mapeamento correto se falível mas ainda devolve resultados com sucesso
+                    badge.className = 'status-badge success';
+                    badge.innerHTML = `✓ ${globalNodes.length} Nós obtidos (Fallback)`;
+
+                    renderMatrix();
+                } catch (fallbackErr) {
+                    console.error("API error (Primary & Fallback):", fallbackErr);
+                    badge.className = 'status-badge error';
+                    badge.innerHTML = `⚠️ Erro de API (Rede e Fallback Indisponíveis)`;
+                }
             }
         }
 
@@ -1365,7 +1412,7 @@
                     📊 Estimativa de Dificuldade
                 </h4>
                 <div style="font-weight: bold; margin-bottom: 8px;">
-                    <span style="color: ${color};">${difficultyLabel}</span> - ${attemptsStr} tentativas esperadas
+                    <span style="color: ${color};">${difficultyLabel}</span> - ${attemptsStr} tentativas esperadas (média estatística)
                 </div>
                 <div style="color: var(--text-secondary); font-size: 14px; line-height: 1.5;">
                     Tempo estimado: <span style="color: var(--text-main);">${timeStr}</span> (a 30.000 chaves/seg)<br>
