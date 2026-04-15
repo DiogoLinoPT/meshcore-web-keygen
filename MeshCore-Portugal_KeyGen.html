@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assistente com base geográfica para Portugal</title>
+
+    <!-- Leaflet JS & CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+
+    <style>
+        :root {
+            --bg-main: #f8f9fa;
+            --bg-card: #ffffff;
+            --text-main: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --accent-primary: #f05e16;
+            --accent-hover: #d24e10;
+            --accent-glow: rgba(240, 94, 22, 0.3);
+            --border-color: #e0e0e0;
+            --input-bg: #ffffff;
+            --input-focus: #f05e16;
+            --header-bg: #e2e8f0;
+            --header-text: #1a202c;
+            --success-color: #27ae60;
+            --error-bg: #fee;
+            --error-color: #c0392b;
+            --info-bg: #e8f4fd;
+            --info-color: #2980b9;
+            --code-bg: #f1f5f9;
+
+            --cell-reserved: #aaaaaa;
+            --cell-free: #33a02c; /* Same as dark theme */
+            --cell-one: #fbd38d; /* Soft Yellow */
+            --cell-many: #fc8181; /* Soft Red */
+            
+            --cell-text: rgba(0, 0, 0, 0.75);
+            --cell-text-shadow: none;
+        }
+
+        [data-theme="dark"] {
+            --bg-main: #111113;
+            --bg-card: #1a1a1c;
+            --text-main: #f8f9fa;
+            --text-secondary: #a0aec0;
+            --accent-primary: #f05e16;
+            --accent-hover: #ff7635;
+            --accent-glow: rgba(240, 94, 22, 0.5);
+            --border-color: #2d3748;
+            --input-bg: #2d3748;
+            --input-focus: #f05e16;
+            --header-bg: #1a1a1c;
+            --header-text: #f8f9fa;
+            --success-color: #4ade80;
+            --error-bg: #4a1d1d;
+            --error-color: #f87171;
+            --info-bg: #1e3a5f;
+            --info-color: #60a5fa;
+            --code-bg: #2d3748;
+
+            --cell-reserved: #333333;
+            /* Branco/Cinzento na ref */
+            --cell-free: #33a02c;
+            /* Verde Vivo */
+            --cell-one: #c2410c;
+            /* Laranja */
+            --cell-many: #991b1b;
+            /* Vermelho Escuro */
+
+            --cell-text: #ffffff;
+            --cell-text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.6);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 20px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 900px;
+            /* Slightly wider for the matrix */
+            margin: 0 auto 40px auto;
+            background: var(--bg-card);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            transition: background 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        [data-theme="dark"] .container {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .header {
+            background: var(--header-bg);
+            color: var(--header-text);
+            padding: 40px 30px 60px 30px;
+            text-align: center;
+            position: relative;
+            border-bottom: 2px solid var(--accent-primary);
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .theme-switch-wrapper {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            z-index: 10;
+        }
+
+        .theme-icon {
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+        }
+
+        .theme-switch {
+            display: inline-block;
+            position: relative;
+            width: 36px;
+            height: 18px;
+        }
+
+        .theme-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .theme-switch .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--input-bg);
+            transition: .3s;
+            border-radius: 18px;
+            border: 1px solid var(--border-color);
+        }
+
+        .theme-switch .slider:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 2px;
+            bottom: 2px;
+            background-color: var(--text-main);
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        .theme-switch input:checked+.slider {
+            background-color: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .theme-switch input:checked+.slider:before {
+            transform: translateX(18px);
+            background-color: white;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .page-subtitle {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--accent-primary);
+            font-size: 1.4em;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-main);
+            font-size: 0.95em;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 12px;
+            background: var(--input-bg);
+            color: var(--text-main);
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--input-focus);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        input[readonly] {
+            cursor: pointer;
+            opacity: 0.9;
+            font-family: 'Courier New', monospace;
+            font-size: 14px !important;
+        }
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            padding-right: 36px;
+            cursor: pointer;
+        }
+
+        [data-theme="dark"] select {
+            border-color: #4a5568;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f8f9fa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        }
+
+        .btn {
+            background-color: var(--accent-primary);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+        }
+
+        .btn:hover:not(:disabled) {
+            background-color: var(--accent-hover);
+        }
+
+        .btn:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        .btn:disabled {
+            background-color: var(--border-color);
+            color: var(--text-secondary);
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 2px solid var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        .btn-outline:hover:not(:disabled) {
+            background-color: var(--accent-glow);
+        }
+
+        .nav-buttons-wrapper {
+            position: absolute;
+            bottom: 15px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 10;
+        }
+
+        .nav-button {
+            background: rgba(45, 55, 72, 0.5);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 4px 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 11px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-button:hover {
+            background: var(--input-bg);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .page-subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 1.1em;
+            margin-bottom: 30px;
+            font-weight: 500;
+            margin-top: -20px;
+        }
+
+        .info {
+            background-color: var(--info-bg);
+            border-left: 4px solid var(--info-color);
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+            color: var(--text-main);
+        }
+
+        #prefixInfo {
+            background: var(--info-bg) !important;
+            border-left-color: var(--accent-primary) !important;
+            margin-top: 20px;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 20px;
+        }
+
+        .footer a {
+            color: var(--text-main);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer a:hover {
+            color: var(--accent-primary);
+        }
+
+        /* Wizard Overrides */
+        .wizard-step {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .wizard-step.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Step 1 Map */
+        #map {
+            height: 350px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 15px;
+            z-index: 1;
+        }
+
+        .coords-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .coords-group>div {
+            flex: 1;
+        }
+
+        .mobile-opt {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            background-color: var(--info-bg);
+            border: 1px solid var(--info-color);
+            border-radius: 8px;
+        }
+
+        .mobile-opt input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .mobile-opt label {
+            margin: 0;
+            cursor: pointer;
+            color: var(--info-color);
+            font-weight: 700;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .help-tooltip {
+            font-size: 12px;
+            opacity: 0.8;
+            font-weight: 400;
+            display: block;
+            margin-top: 5px;
+        }
+
+        /* Step 2 Matrix & Filters */
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 25px;
+            padding: 15px;
+            background: var(--code-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .filters>div {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .matrix-legend {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 15px;
+            font-size: 12px;
+            font-weight: 600;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-box {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+        }
+
+        .matrix-wrapper {
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .matrix {
+            display: grid;
+            grid-template-columns: repeat(16, minmax(28px, 1fr));
+            gap: 2px;
+            background-color: var(--border-color);
+            border: 1px solid var(--border-color);
+            padding: 2px;
+            border-radius: 6px;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--cell-text);
+            text-shadow: var(--cell-text-shadow);
+            transition: transform 0.1s, filter 0.2s;
+            position: relative;
+        }
+
+        .cell:not(.header):not(.reserved):hover {
+            outline: 2px solid white;
+            z-index: 2;
+            transform: scale(1.1);
+            cursor: pointer;
+        }
+
+        .cell.reserved {
+            background-color: var(--cell-reserved);
+            opacity: 0.8;
+            cursor: not-allowed;
+        }
+
+        .cell.free {
+            background-color: var(--cell-free);
+            color: rgba(0, 0, 0, 0.75); /* Always keep Dark Text on Green regardless of Light/Dark theme to ensure readibility for this specific hue */
+            text-shadow: none;
+        }
+
+        .cell.one {
+            background-color: var(--cell-one);
+        }
+
+        .cell.many {
+            background-color: var(--cell-many);
+        }
+
+        .cell-tooltip {
+            position: absolute;
+            bottom: 120%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #111;
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            white-space: pre-wrap;
+            width: max-content;
+            max-width: 200px;
+            text-align: center;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 10;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            text-shadow: none;
+            font-family: 'Inter', sans-serif;
+            font-weight: 400;
+        }
+
+        .cell-tooltip.tooltip-bottom {
+            bottom: auto;
+            top: 120%;
+        }
+
+        .cell-tooltip.tooltip-right {
+            left: 0;
+            transform: none;
+        }
+
+        .cell-tooltip.tooltip-left {
+            left: auto;
+            right: 0;
+            transform: none;
+        }
+
+        .cell:hover .cell-tooltip {
+            opacity: 1;
+        }
+
+        /* Result Area */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            background-color: var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        .status-badge.running {
+            background-color: var(--info-bg);
+            color: var(--info-color);
+        }
+
+        .status-badge.success {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .status-badge.error {
+            background-color: var(--error-bg);
+            color: var(--error-color);
+        }
+
+        .loader {
+            width: 12px;
+            height: 12px;
+            border: 2px solid currentColor;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            animation: rotation 1s linear infinite;
+            display: none;
+        }
+
+        .status-badge.running .loader {
+            display: inline-block;
+        }
+
+        @keyframes rotation {
+            0% {
+                transform: rotate(0deg)
+            }
+
+            100% {
+                transform: rotate(360deg)
+            }
+        }
+
+        .iframe-container {
+            display: none;
+            height: 0;
+            width: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="nav-buttons-wrapper">
+                <a href="./index.html" class="nav-button" title="Return to Main App">
+                    <span style="font-size: 1.2em;">⚙️</span> Key Generator
+                </a>
+            </div>
+            <div class="theme-switch-wrapper" title="Toggle Light/Dark Theme">
+                <span class="theme-icon light-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </span>
+                <label class="theme-switch" for="themeToggle">
+                    <input type="checkbox" id="themeToggle" />
+                    <span class="slider"></span>
+                </label>
+                <span class="theme-icon dark-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </span>
+            </div>
+
+            <h1>Gerador de chaves MeshCore</h1>
+            <p>Gerar chaves Ed25519 personalizadas para MeshCore</p>
+        </div>
+
+        <div class="content">
+            <h2 class="page-subtitle">Assistente com base geográfica para Portugal</h2>
+
+            <!-- STEP 1: Map / Location -->
+            <div id="step1" class="wizard-step active">
+                <div class="mobile-opt">
+                    <input type="checkbox" id="isMobileDevice" onchange="toggleStep1Mode()">
+                    <label for="isMobileDevice">
+                        <div>Repetidor móvel (terá prefixo 0100)
+                            <span class="help-tooltip">Escolhe esta opção se não vais ter o repetidor numa posição fixa
+                                (telhado, torre, etc.), e se vai assumir diferentes posições (no carro, bolso,
+                                etc.).</span>
+                        </div>
+                    </label>
+                </div>
+
+                <div id="mapWrapper">
+                    <h3 style="margin-bottom: 12px;">1. Seleciona a Localização Planeada</h3>
+                    <div id="map"></div>
+                    <div class="coords-group">
+                        <div>
+                            <label>Latitude</label>
+                            <input type="number" id="inputLat" step="0.000001" placeholder="Ex: 39.5">
+                        </div>
+                        <div>
+                            <label>Longitude</label>
+                            <input type="number" id="inputLon" step="0.000001" placeholder="Ex: -8.0">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end;">
+                    <button class="btn" id="btnNext1" onclick="goToStep2()">Seguinte ➔</button>
+                    <button class="btn" id="btnNext1Mobile" style="display:none;" onclick="skipToGeneration()">Saltar
+                        para Geração ➔</button>
+                </div>
+            </div>
+
+            <!-- STEP 2: Filter & Matrix -->
+            <div id="step2" class="wizard-step">
+                <div class="status-header" style="margin-bottom: 20px;">
+                    <h3 style="margin: 0;">2. Disponibilidade de prefixos/IDs</h3>
+                    <span id="apiStatusBadge" class="status-badge">Pronto</span>
+                </div>
+
+                <div id="step2LocationInfo" style="margin-bottom: 20px; padding: 12px 16px; background: rgba(0, 150, 255, 0.05); border: 1px solid rgba(0, 150, 255, 0.2); border-left: 4px solid var(--accent-glow); border-radius: 6px; font-size: 14px; display: flex; align-items: center; gap: 12px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-glow)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    <div>
+                        <div style="font-weight: 600; color: var(--text-main);" id="step2LocName">A obter Região/Concelho...</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);" id="step2Coords"></div>
+                    </div>
+                </div>
+
+                <div class="filters">
+                    <div>
+                        <label>Filtro Temporal (Última atividade)</label>
+                        <select id="timeFilter" onchange="refreshApiData()">
+                            <option value="3d">Últimos 3 dias</option>
+                            <option value="1w" selected>Última 1 semana</option>
+                            <option value="1m">Último 1 mês</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Raio de Interceção: <span id="distValOut">1000</span> km</label>
+                        <div class="slider-container">
+                            <input type="range" id="distFilter" min="0" max="4" step="1" value="4"
+                                oninput="updateDistLabel()" onchange="renderMatrix()">
+                        </div>
+                        <div
+                            style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary); margin-top:4px; padding: 0 4px;">
+                            <span>100km</span><span>250km</span><span>400km</span><span>600km</span><span>1000km</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="matrix-legend">
+                    <div class="legend-item">
+                        <div class="legend-box" style="background:var(--cell-reserved)"></div> Reservado
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box" style="background:var(--cell-free)"></div> Disponível
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box" style="background:var(--cell-one)"></div> 1 Nó Encontrado
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box" style="background:var(--cell-many)"></div> 2+ Nós Encontrados
+                    </div>
+                </div>
+
+                <div class="matrix-wrapper">
+                    <div class="matrix" id="hexMatrix"></div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; margin-top: 25px;">
+                    <button class="btn btn-outline" onclick="goToStep1()">🡠 Voltar ao Mapa</button>
+                    <!-- Generation happens by clicking inside matrix natively -->
+                </div>
+            </div>
+
+            <!-- STEP 3 & 4: Customization & Results -->
+            <div id="step3" class="wizard-step">
+                
+                <div id="preGenForm" style="margin-bottom: 25px;">
+                    <h3 style="margin-top: 0; margin-bottom: 14px;">3. Personalizar Chave (Opcional)</h3>
+                    <p id="preGenDesc" style="margin-bottom: 20px; color: var(--text-secondary); line-height: 1.6; font-size: 14px;">O prefixo escolhido aparenta estar livre geográficamente. Pode manter o prefixo exato sugerido ou acrescentar os seus próprios caracteres adicionais no fim se desejar criar uma <em>Vanity Key</em> detalhada (apenas hexadecimal: [0-9, A-F]). <br><br><b>Nota de Performance:</b> Quanto mais caracteres adicionar, exponencialmente mais tempo de CPU o seu computador necessitará para a descobrir.</p>
+                    <div class="form-group" style="max-width: 380px;">
+                        <label>Prefixo Hexadecimal Desejado</label>
+                        <div style="display: flex; align-items: stretch; background: var(--input-bg); border: 2px solid var(--border-color); border-radius: 6px; overflow: hidden; transition: all 0.3s ease;" id="customPrefixWrapper">
+                            <div id="basePrefixDisplay" style="padding: 12px 2px 12px 14px; font-size: 16px; letter-spacing: 2px; font-family: 'Courier New', monospace; background: rgba(120, 120, 120, 0.1); color: var(--text-secondary); pointer-events: none; font-weight: bold; border-right: 1px dotted var(--border-color);"></div>
+                            <input type="text" id="chosenPrefix" oninput="updateDifficultyEstimate(); this.value = this.value.replace(/[^0-9A-Fa-f]/g, '');" style="border: none; background: transparent; padding: 12px 14px 12px 8px; flex: 1; outline: none; color: var(--text-main); font-size: 16px; letter-spacing: 2px; font-family: 'Courier New', monospace; text-transform: uppercase; width: 100%; box-shadow: none;" placeholder="[Opcional]" maxlength="60" onfocus="document.getElementById('customPrefixWrapper').style.borderColor='var(--input-focus)'; document.getElementById('customPrefixWrapper').style.boxShadow='0 0 0 3px var(--accent-glow)';" onblur="document.getElementById('customPrefixWrapper').style.borderColor='var(--border-color)'; document.getElementById('customPrefixWrapper').style.boxShadow='none';">
+                        </div>
+                    </div>
+                    
+                    <div id="prefixInfo" class="info" style="display: none; max-width: 380px;">
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 22px;">
+                        <button class="btn btn-primary" onclick="startGenerationFlow()">Gerar chaves</button>
+                        <button class="btn btn-outline" onclick="cancelPreGen()">Voltar</button>
+                    </div>
+                </div>
+
+                <div id="postGenResults" style="display: none;">
+                    <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 20px;">
+                        <h3 style="margin: 0;">4. Resultados da Geração</h3>
+                        <span id="genStatusBadge" class="status-badge">Idle</span>
+                    </div>
+
+                    <div class="iframe-container">
+                        <iframe id="apiFrame" src="json-api.html"></iframe>
+                    </div>
+
+                <div id="resultForm" style="display: none; margin-top: 15px;">
+                    <div class="form-group">
+                        <label>Public Key (Identificador de Nó MeshCore)</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="resPubKey" readonly class="hex-input" onclick="this.select()" style="flex: 1;">
+                            <button class="btn btn-outline" type="button" onclick="copyToClipboard('resPubKey', this)" title="Copiar" style="padding: 0 12px; display: flex; align-items: center; justify-content: center; height: 42px;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Private Key</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="resPrivKey" readonly class="hex-input" onclick="this.select()" style="flex: 1;">
+                            <button class="btn btn-outline" type="button" onclick="copyToClipboard('resPrivKey', this)" title="Copiar" style="padding: 0 12px; display: flex; align-items: center; justify-content: center; height: 42px;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            </button>
+                        </div>
+                        <div style="font-size: 12px; color: var(--error-color); margin-top: 5px; font-weight: bold;">
+                            Cuidado: Nunca partilhes a Private Key.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Seed Data</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="resSeed" readonly class="hex-input" onclick="this.select()" style="flex: 1;">
+                            <button class="btn btn-outline" type="button" onclick="copyToClipboard('resSeed', this)" title="Copiar" style="padding: 0 12px; display: flex; align-items: center; justify-content: center; height: 42px;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 100px;">
+                            <label>Prefixo Encontrado</label>
+                            <input type="text" id="resPrefix" readonly>
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 100px;">
+                            <label>Tentativas</label>
+                            <input type="text" id="resAttempts" readonly>
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 100px;">
+                            <label>Tempo Despendido</label>
+                            <input type="text" id="resTime" readonly>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; margin-top: 25px;">
+                    <button class="btn btn-outline" onclick="location.reload()">🡠 Recomeçar de Novo</button>
+                    <!--<button class="btn" onclick="alert('Funcionalidade futura: descarregar .json config')">Guardar Configuração</button>-->
+                </div>
+                </div> <!-- Closing postGenResults -->
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <div style="margin-bottom: 5px;">💻 <a href="https://github.com/DiogoLinoPT/meshcore-web-keygen" target="_blank"
+                rel="noopener" style="text-decoration: underline;">Source code at Github</a> <span
+                style="opacity: 0.7; font-size: 0.9em; margin-left: 5px;">v1.0.0</span></div>
+        <div style="font-size: 0.9em; opacity: 0.8;">Base engine by <a
+                href="https://github.com/agessaman/meshcore-web-keygen" target="_blank" rel="noopener">agessaman</a>.
+            Tailored for MeshCore Portugal.</div>
+    </div>
+
+    <script>
+        // Theme initialization and toggle logic
+        const themeToggle = document.querySelector('.theme-switch input[type="checkbox"]');
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+
+            themeToggle.checked = (theme === 'dark');
+            const lightIcon = document.querySelector('.light-icon');
+            const darkIcon = document.querySelector('.dark-icon');
+            if (lightIcon && darkIcon) {
+                lightIcon.style.opacity = theme === 'dark' ? '0.5' : '1';
+                darkIcon.style.opacity = theme === 'dark' ? '1' : '0.5';
+            }
+        }
+
+        // Check local storage or system preference
+        const savedTheme = localStorage.getItem('theme');
+        const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        // Default to dark theme unless user explicitly chose light, or system is light and no preference saved
+        if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark) || (!savedTheme && !systemPrefersDark)) { // MeshCore Default: Dark Focus
+            setTheme('dark');
+        } else if (savedTheme === 'light') {
+            setTheme('light');
+        } else {
+            setTheme('dark');
+        }
+
+        themeToggle.addEventListener('change', (e) => {
+            setTheme(e.target.checked ? 'dark' : 'light');
+        });
+
+        // --- MAP STATE ---
+        let map;
+        let marker;
+        // Defaults to Center of Portugal roughly
+        let selLat = 39.5;
+        let selLon = -8.0;
+
+        function initMap() {
+            if (map) return;
+            map = L.map('map').setView([selLat, selLon], 6);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            const updateCoords = (lat, lng) => {
+                selLat = lat; selLon = lng;
+                document.getElementById('inputLat').value = lat.toFixed(5);
+                document.getElementById('inputLon').value = lng.toFixed(5);
+            };
+
+            map.on('click', function (e) {
+                if (marker) map.removeLayer(marker);
+                marker = L.marker(e.latlng).addTo(map);
+                updateCoords(e.latlng.lat, e.latlng.lng);
+            });
+
+            document.getElementById('inputLat').addEventListener('change', function (e) {
+                let v = parseFloat(e.target.value);
+                if (!isNaN(v)) { selLat = v; updateMarkerPos(); }
+            });
+            document.getElementById('inputLon').addEventListener('change', function (e) {
+                let v = parseFloat(e.target.value);
+                if (!isNaN(v)) { selLon = v; updateMarkerPos(); }
+            });
+
+            function updateMarkerPos() {
+                if (marker) map.removeLayer(marker);
+                marker = L.marker([selLat, selLon]).addTo(map);
+                map.panTo([selLat, selLon]);
+            }
+        }
+        // Initialize map asynchronously to ensure DOM is ready
+        setTimeout(initMap, 100);
+
+        // --- WIZARD LOGIC ---
+        function toggleStep1Mode() {
+            const isMobile = document.getElementById('isMobileDevice').checked;
+            if (isMobile) {
+                document.getElementById('mapWrapper').style.display = 'none';
+                document.getElementById('btnNext1').style.display = 'none';
+                document.getElementById('btnNext1Mobile').style.display = 'block';
+            } else {
+                document.getElementById('mapWrapper').style.display = 'block';
+                document.getElementById('btnNext1').style.display = 'block';
+                document.getElementById('btnNext1Mobile').style.display = 'none';
+            }
+        }
+
+        function switchStep(stepId) {
+            document.querySelectorAll('.wizard-step').forEach(el => el.classList.remove('active'));
+            document.getElementById(stepId).classList.add('active');
+        }
+
+        function goToStep1() {
+            switchStep('step1');
+        }
+
+        function goToStep2() {
+            if (!selLat || !selLon) {
+                alert("Por favor defina as coordenadas do repetidor no mapa ou caixas de texto.");
+                return;
+            }
+            switchStep('step2');
+            
+            // Set coords label
+            document.getElementById('step2Coords').innerText = `Lat: ${selLat.toFixed(6)}, Lon: ${selLon.toFixed(6)}`;
+            document.getElementById('step2LocName').innerText = "A obter localização externa...";
+
+            // Temporary Reverse Geocoding implementation until PortugalGeoAPI is ready
+            fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${selLat}&longitude=${selLon}&localityLanguage=pt`)
+                .then(res => res.json())
+                .then(data => {
+                    let locParts = [];
+                    if (data.city) locParts.push(data.city);
+                    else if (data.locality) locParts.push(data.locality);
+                    if (data.principalSubdivision) locParts.push(data.principalSubdivision);
+                    
+                    if (locParts.length > 0) {
+                        document.getElementById('step2LocName').innerText = locParts.join(', ');
+                    } else {
+                        document.getElementById('step2LocName').innerText = data.countryName || 'Localização Desconhecida';
+                    }
+                })
+                .catch(() => {
+                    document.getElementById('step2LocName').innerText = 'Localização (Acesso a API bloqueado)';
+                });
+
+            // Force radius to 1000 initially per spec
+            document.getElementById('distFilter').value = 4;
+            updateDistLabel();
+            // Start fetch
+            refreshApiData();
+        }
+
+        function copyToClipboard(elementId, btnElement) {
+            const copyText = document.getElementById(elementId);
+            copyText.select();
+            copyText.setSelectionRange(0, 99999); // For mobile devices
+            navigator.clipboard.writeText(copyText.value);
+
+            const originalHTML = btnElement.innerHTML;
+            btnElement.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--success-color, #2ecc71)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+            btnElement.style.borderColor = 'var(--success-color, #2ecc71)';
+            
+            setTimeout(() => {
+                btnElement.innerHTML = originalHTML;
+                btnElement.style.borderColor = '';
+            }, 2000);
+        }
+
+        function cancelPreGen() {
+            const isMobileDevice = document.getElementById('isMobileDevice').checked;
+            if (isMobileDevice) {
+                switchStep('step1');
+            } else {
+                switchStep('step2');
+            }
+        }
+
+        function skipToGeneration() {
+            document.getElementById('basePrefixDisplay').innerText = '0100';
+            document.getElementById('chosenPrefix').value = '';
+            document.getElementById('preGenDesc').innerHTML = "O prefixo <b>0100</b> é a norma para repetidores móveis em Portugal, pelo que existirão dezenas de nós com este mesmo prefixo.<br><br>Pode manter o prefixo exato sugerido ou acrescentar os seus próprios caracteres adicionais no fim se desejar criar uma <em>Vanity Key</em> mais detalhada.<br><br><b>Nota de Performance:</b> Quanto mais caracteres adicionar, exponencialmente mais tempo de CPU o seu computador necessitará para a descobrir.";
+            document.getElementById('preGenForm').style.display = 'block';
+            document.getElementById('postGenResults').style.display = 'none';
+            switchStep('step3');
+            updateDifficultyEstimate();
+        }
+
+        function startGenerationFlow() {
+            const base = document.getElementById('basePrefixDisplay').innerText;
+            const suffix = document.getElementById('chosenPrefix').value.trim().toUpperCase();
+            const prefix = base + suffix;
+            
+            if (suffix.length > 0 && !/^[0-9A-F]+$/.test(suffix)) {
+                alert("Extensão inválida! Por favor introduza apenas caracteres hexadecimais (0 a 9, A a F).");
+                return;
+            }
+            document.getElementById('preGenForm').style.display = 'none';
+            document.getElementById('postGenResults').style.display = 'block';
+            triggerGeneration(prefix);
+        }
+
+        // --- API & DATA LOGIC ---
+        let globalNodes = [];
+        const RESERVED_PREFIXES = ['00', '01', 'FF'];
+
+        // Slider Steps Enforcer
+        const allowedSteps = [100, 250, 400, 600, 1000];
+        function updateDistLabel() {
+            const idx = parseInt(document.getElementById('distFilter').value);
+            document.getElementById('distValOut').innerText = allowedSteps[idx];
+        }
+
+        function getISODateForTimeFilter(val) {
+            const date = new Date();
+            if (val === '3d') date.setDate(date.getDate() - 3);
+            else if (val === '1w') date.setDate(date.getDate() - 7);
+            else if (val === '1m') date.setMonth(date.getMonth() - 1);
+            return date.toISOString();
+        }
+
+        async function refreshApiData() {
+            const timeVal = document.getElementById('timeFilter').value;
+            const updatedSinceStr = getISODateForTimeFilter(timeVal);
+
+            const badge = document.getElementById('apiStatusBadge');
+            badge.className = 'status-badge running';
+            badge.innerHTML = '<span class="loader"></span> Carregando...';
+
+            try {
+                const rawUrlLIS = `https://api.letsmesh.net/api/nodes?region=LIS&updated_since=${encodeURIComponent(updatedSinceStr)}`;
+                const rawUrlOPO = `https://api.letsmesh.net/api/nodes?region=OPO&updated_since=${encodeURIComponent(updatedSinceStr)}`;
+
+                // Fetch both LIS and OPO in parallel using a public CORS proxy
+                const [resLIS, resOPO] = await Promise.all([
+                    fetch(`https://corsproxy.io/?${encodeURIComponent(rawUrlLIS)}`),
+                    fetch(`https://corsproxy.io/?${encodeURIComponent(rawUrlOPO)}`)
+                ]);
+
+                const dataLIS = await resLIS.json();
+                const dataOPO = await resOPO.json();
+
+                // Merge node arrays
+                let combinedNodes = [];
+                if (dataLIS && dataLIS.nodes) combinedNodes = combinedNodes.concat(dataLIS.nodes);
+                if (dataOPO && dataOPO.nodes) combinedNodes = combinedNodes.concat(dataOPO.nodes);
+
+                // Deduplicate by public_key just in case regions overlap
+                const uniqueMap = new Map();
+                for (let n of combinedNodes) {
+                    if (n && n.public_key) uniqueMap.set(n.public_key, n);
+                }
+
+                globalNodes = Array.from(uniqueMap.values());
+
+                badge.className = 'status-badge success';
+                badge.innerHTML = `✓ ${globalNodes.length} Nós obtidos`;
+
+                renderMatrix();
+
+            } catch (err) {
+                console.error("API error:", err);
+                badge.className = 'status-badge error';
+                badge.innerHTML = `⚠️ Erro de API`;
+            }
+        }
+
+        // Haversine formula
+        function calcCrow(lat1, lon1, lat2, lon2) {
+            const R = 6371; // km
+            const dLat = toRad(lat2 - lat1);
+            const dLon = toRad(lon2 - lon1);
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+        function toRad(Value) { return Value * Math.PI / 180; }
+
+        function renderMatrix() {
+            const matrixContainer = document.getElementById('hexMatrix');
+            matrixContainer.innerHTML = '';
+
+            const distIdx = parseInt(document.getElementById('distFilter').value);
+            const radiusKm = allowedSteps[distIdx];
+
+            // Filter nodes by distance and build dictionary of prefix -> list of nodes
+            const prefixMap = {};
+            // Initialize 00 to FF
+            for (let i = 0; i < 256; i++) {
+                const hex = i.toString(16).padStart(2, '0').toUpperCase();
+                prefixMap[hex] = [];
+            }
+
+            for (const node of globalNodes) {
+                // Must have location
+                if (!node.location || typeof node.location.latitude !== 'number') continue;
+
+                const dist = calcCrow(selLat, selLon, node.location.latitude, node.location.longitude);
+                if (dist <= radiusKm) {
+                    // Node is within radius! Add to prefix map
+                    if (node.public_key && node.public_key.length >= 2) {
+                        const prefix = node.public_key.substring(0, 2).toUpperCase();
+                        if (prefixMap[prefix]) {
+                            prefixMap[prefix].push(node.name || "Nó Desconhecido");
+                        }
+                    }
+                }
+            }
+
+            for (let row = 0; row < 16; row++) {
+                for (let col = 0; col < 16; col++) {
+                    const dec = row * 16 + col;
+                    const hex = dec.toString(16).padStart(2, '0').toUpperCase();
+
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.innerText = hex;
+                    cell.setAttribute('data-prefix', hex);
+
+                    if (RESERVED_PREFIXES.includes(hex)) {
+                        cell.classList.add('reserved');
+                        cell.title = "Protocolo Reservado";
+                    } else {
+                        const nodesInPrefix = prefixMap[hex];
+                        if (nodesInPrefix.length === 0) {
+                            cell.classList.add('free');
+                            const tooltip = document.createElement('div');
+                            tooltip.className = 'cell-tooltip';
+                            tooltip.innerText = "Clique para gerar\nchave: " + hex;
+                            cell.appendChild(tooltip);
+                            // Click opens intermediate customization screen
+                            cell.addEventListener('click', () => {
+                                document.getElementById('basePrefixDisplay').innerText = hex;
+                                document.getElementById('chosenPrefix').value = '';
+                                document.getElementById('preGenDesc').innerHTML = "O prefixo escolhido aparenta estar livre geográficamente. Pode manter o prefixo exato sugerido ou acrescentar os seus próprios caracteres adicionais no fim se desejar criar uma <em>Vanity Key</em> detalhada (apenas hexadecimal: [0-9, A-F]). <br><br><b>Nota de Performance:</b> Quanto mais caracteres adicionar, exponencialmente mais tempo de CPU o seu computador necessitará para a descobrir.";
+                                document.getElementById('preGenForm').style.display = 'block';
+                                document.getElementById('postGenResults').style.display = 'none';
+                                switchStep('step3');
+                                updateDifficultyEstimate();
+                            });
+                        } else if (nodesInPrefix.length === 1) {
+                            cell.classList.add('one');
+                            const tooltip = document.createElement('div');
+                            tooltip.className = 'cell-tooltip';
+                            tooltip.style.textAlign = 'left';
+                            tooltip.innerText = "Em uso por:\n• " + nodesInPrefix[0];
+                            cell.appendChild(tooltip);
+                        } else {
+                            cell.classList.add('many');
+                            const tooltip = document.createElement('div');
+                            tooltip.className = 'cell-tooltip';
+                            tooltip.style.textAlign = 'left';
+                            let txt = `${nodesInPrefix.length} Nós utilizam:\n` + nodesInPrefix.map(n => `• ${n}`).join('\n');
+                            tooltip.innerText = txt;
+                            cell.appendChild(tooltip);
+                        }
+                    }
+
+                    const tooltips = cell.querySelectorAll('.cell-tooltip');
+                    tooltips.forEach(tp => {
+                        if (row < 4) tp.classList.add('tooltip-bottom'); // Primeiras 4 linhas abrem para baixo
+                        if (col < 3) tp.classList.add('tooltip-right');  // Primeiras 3 colunas abrem para a direita
+                        if (col > 12) tp.classList.add('tooltip-left');  // Últimas 3 colunas abrem para a esquerda
+                    });
+
+                    matrixContainer.appendChild(cell);
+                }
+            }
+        }
+
+        function createHeaderCell(text) {
+            const cell = document.createElement('div');
+            cell.className = 'cell header';
+            cell.innerText = text;
+            return cell;
+        }
+
+        // --- GENERATION (postMessage) ---
+        const apiFrame = document.getElementById('apiFrame');
+        const genStatusIndicator = document.getElementById('genStatusBadge');
+        const resultForm = document.getElementById('resultForm');
+
+        function triggerGeneration(prefixHex) {
+            // Update UI
+            genStatusIndicator.className = 'status-badge running';
+            genStatusIndicator.innerHTML = '<span class="loader"></span> A Gerar Chaves (Processo Pesado)...';
+            resultForm.style.display = 'none';
+
+            // Post to iframe
+            apiFrame.contentWindow.postMessage({
+                type: 'meshcore-api-request',
+                prefix: prefixHex,
+                exclude: []
+            }, '*');
+        }
+
+        window.addEventListener('message', (event) => {
+            const payload = event.data;
+            if (payload && payload.type === 'meshcore-api-progress') {
+                const stats = payload.data;
+                const formattedRate = stats.rate.toLocaleString('pt-PT');
+                const formattedAttempts = stats.attempts.toLocaleString('pt-PT');
+                genStatusIndicator.innerHTML = `<span class="loader"></span> Geração em curso... ${formattedAttempts} chaves tentadas (${formattedRate} chaves/seg)`;
+            }
+
+            if (payload && payload.type === 'meshcore-api') {
+                if (payload.error) {
+                    genStatusIndicator.className = 'status-badge error';
+                    genStatusIndicator.innerHTML = '⚠️ Erro';
+                    alert('Erro na Geração: ' + payload.error);
+                } else if (payload.data) {
+                    genStatusIndicator.className = 'status-badge success';
+                    genStatusIndicator.innerHTML = '✓ Sucesso!';
+
+                    document.getElementById('resPubKey').value = payload.data.publicKey || '';
+                    document.getElementById('resPrivKey').value = payload.data.privateKey || '';
+                    document.getElementById('resSeed').value = payload.data.seed || '';
+                    document.getElementById('resPrefix').value = payload.data.prefix || '';
+                    document.getElementById('resAttempts').value = (payload.data.attempts || 0).toLocaleString('pt-PT');
+                    document.getElementById('resTime').value = (payload.data.timeElapsedSeconds || 0) + 's';
+
+                    resultForm.style.display = 'block';
+                }
+            }
+        });
+
+        function updateDifficultyEstimate() {
+            const basePrefix = document.getElementById('basePrefixDisplay').innerText.trim();
+            const customSuffix = document.getElementById('chosenPrefix').value.trim();
+            const fullPrefix = basePrefix + customSuffix;
+            const len = fullPrefix.length;
+            
+            const difficultyBox = document.getElementById('prefixInfo');
+
+            if (len === 0) {
+                difficultyBox.style.display = 'none';
+                return;
+            }
+            
+            const possibleValues = Math.pow(16, len);
+            const probability = 1 / possibleValues;
+            let percentFormat = probability * 100;
+            // Prevent e-notation natively by rounding appropriately, or toFixed
+            let percentStr = percentFormat > 0.000001 ? percentFormat.toFixed(6) : "< 0.000001";
+            
+            let difficultyLabel = "Fácil";
+            let color = "var(--success-color)";
+            if (len >= 6) { difficultyLabel = "Moderado"; color = "var(--cell-one)"; }
+            if (len >= 8) { difficultyLabel = "Difícil"; color = "var(--error-color)"; }
+            if (len >= 10) { difficultyLabel = "Extremo"; color = "var(--error-color)"; }
+            
+            // Estimated time (at 30k/sec)
+            const estTimeSecs = possibleValues / 30000;
+            let timeStr = `~${Math.round(estTimeSecs)} segundos`;
+            if (estTimeSecs > 60) timeStr = `~${Math.round(estTimeSecs/60)} minutos`;
+            if (estTimeSecs > 3600) timeStr = `~${Math.round(estTimeSecs/3600)} horas`;
+            if (estTimeSecs > 86400) timeStr = `~${Math.round(estTimeSecs/86400)} dias`;
+            if (estTimeSecs > 86400*365) timeStr = `~${Math.round(estTimeSecs/(86400*365))} anos`;
+            
+            // Formatting attempts like 4.1k:
+            let attemptsStr = possibleValues.toLocaleString('pt-PT');
+            if (possibleValues >= 1e9) attemptsStr = (possibleValues / 1e9).toFixed(1) + " mil milhões";
+            else if (possibleValues >= 1e6) attemptsStr = (possibleValues / 1e6).toFixed(1) + " milhões";
+            else if (possibleValues >= 1e3) attemptsStr = (possibleValues / 1e3).toFixed(1) + " milhares";
+            
+            difficultyBox.innerHTML = `
+                <h4 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">
+                    📊 Estimativa de Dificuldade
+                </h4>
+                <div style="font-weight: bold; margin-bottom: 8px;">
+                    <span style="color: ${color};">${difficultyLabel}</span> - ${attemptsStr} tentativas esperadas
+                </div>
+                <div style="color: var(--text-secondary); font-size: 14px; line-height: 1.5;">
+                    Tempo estimado: <span style="color: var(--text-main);">${timeStr}</span> (a 30.000 chaves/seg)<br>
+                    Probabilidade: 1 em ${possibleValues.toLocaleString('pt-PT')} (${percentStr}%)
+                </div>
+            `;
+            difficultyBox.style.display = 'block';
+        }
+
+    </script>
+</body>
+
+</html>

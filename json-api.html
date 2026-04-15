@@ -55,7 +55,14 @@
                 
                 outputDiv.textContent = `Generating keys... (Engine: ${keyGenerator.generationMode})`;
 
-                const result = await keyGenerator.generateVanityKey(prefix.toUpperCase(), prefix.length);
+                const progressCb = (stats) => {
+                    outputDiv.textContent = `Progress: ${stats.attempts} attempts (${stats.rate} keys/s)`;
+                    if (window.parent !== window) {
+                        window.parent.postMessage({ type: 'meshcore-api-progress', data: stats }, '*');
+                    }
+                };
+
+                const result = await keyGenerator.generateVanityKey(prefix.toUpperCase(), prefix.length, progressCb);
 
                 if (result) {
                     const jsonResult = {
