@@ -454,7 +454,8 @@
         .filters {
             display: flex;
             flex-wrap: wrap;
-            gap: 20px;
+            gap: 25px;
+            column-gap: 40px;
             margin-bottom: 25px;
             padding: 15px;
             background: var(--code-bg);
@@ -763,9 +764,11 @@
                     <div>
                         <label>Filtro Temporal (Última atividade)</label>
                         <select id="timeFilter" onchange="refreshApiData()">
-                            <option value="3d">Últimos 3 dias</option>
-                            <option value="1w" selected>Última 1 semana</option>
-                            <option value="1m">Último 1 mês</option>
+                            <option value="1d">1 dia</option>
+                            <option value="3d" selected>3 dias</option>
+                            <option value="1w">1 semana</option>
+                            <option value="2w">2 semanas</option>
+                            <option value="1m">1 mês</option>
                         </select>
                     </div>
                     <div>
@@ -900,7 +903,7 @@
     <div class="footer">
         <div style="margin-bottom: 5px;">💻 <a href="https://github.com/DiogoLinoPT/meshcore-web-keygen" target="_blank"
                 rel="noopener" style="text-decoration: underline;">Source code at Github</a> <span
-                style="opacity: 0.7; font-size: 0.9em; margin-left: 5px;">v1.1.0</span></div>
+                style="opacity: 0.7; font-size: 0.9em; margin-left: 5px;">v1.1.1</span></div>
         <div style="font-size: 0.9em; opacity: 0.8;">Base engine by <a
                 href="https://github.com/agessaman/meshcore-web-keygen" target="_blank" rel="noopener">agessaman</a>.
             Tailored for MeshCore Portugal.</div>
@@ -1120,8 +1123,10 @@
 
         function getISODateForTimeFilter(val) {
             const date = new Date();
-            if (val === '3d') date.setDate(date.getDate() - 3);
+            if (val === '1d') date.setDate(date.getDate() - 1);
+            else if (val === '3d') date.setDate(date.getDate() - 3);
             else if (val === '1w') date.setDate(date.getDate() - 7);
+            else if (val === '2w') date.setDate(date.getDate() - 14);
             else if (val === '1m') date.setMonth(date.getMonth() - 1);
             return date.toISOString();
         }
@@ -1155,7 +1160,15 @@
                 // Deduplicate by public_key just in case regions overlap
                 const uniqueMap = new Map();
                 for (let n of combinedNodes) {
-                    if (n && n.public_key) uniqueMap.set(n.public_key, n);
+                    if (n && n.public_key) {
+                        // Exclude nodes that listen to foreign regions
+                        if (n.regions && Array.isArray(n.regions)) {
+                            const hasForeignRegion = n.regions.some(r => r !== 'LIS' && r !== 'OPO');
+                            if (hasForeignRegion) continue;
+                        }
+                        
+                        uniqueMap.set(n.public_key, n);
+                    }
                 }
 
                 globalNodes = Array.from(uniqueMap.values());
@@ -1168,8 +1181,10 @@
             } catch (err) {
                 console.warn("Letsmesh API error, attempting fallback...", err);
                 try {
-                    let days = 7;
-                    if (timeVal === '3d') days = 3;
+                    let days = 3;
+                    if (timeVal === '1d') days = 1;
+                    else if (timeVal === '1w') days = 7;
+                    else if (timeVal === '2w') days = 14;
                     else if (timeVal === '1m') days = 30;
                     
                     const fallbackUrl = `https://www.meshcore.pt/api/nodes/list?days=${days}&excludeUsers=false&v=1`;
@@ -1180,14 +1195,29 @@
                     
                     const uniqueMap = new Map();
                     for (let n of fallbackNodes) {
-                        if (n && n.public_key && n.lat !== undefined && n.long !== undefined) {
+                        if (n && n.public_key) {
+                            // Exclude nodes that listen to foreign regions
+                            if (n.regions && Array.isArray(n.regions)) {
+                                const hasForeignRegion = n.regions.some(r => r !== 'LIS' && r !== 'OPO');
+                                if (hasForeignRegion) continue;
+                            }
+                            
+                            let mappedLoc = null;
+                            if (n.lat !== undefined && n.lat !== null && n.lat !== 0) {
+                                mappedLoc = { latitude: n.lat, longitude: n.long };
+                            } else if (n.location && typeof n.location.latitude === 'number' && n.location.latitude !== 0) {
+                                mappedLoc = n.location;
+                            } else if (n.decoded_payload && typeof n.decoded_payload.lat === 'number' && n.decoded_payload.lat !== 0) {
+                                mappedLoc = { latitude: n.decoded_payload.lat, longitude: n.decoded_payload.lon };
+                            }
+                            
                             uniqueMap.set(n.public_key, {
                                 public_key: n.public_key,
                                 name: n.name,
-                                location: {
-                                    latitude: n.lat,
-                                    longitude: n.long
-                                }
+                                location: mappedLoc,
+                                decoded_payload: n.decoded_payload,
+                                last_seen: n.last_seen,
+                                timestamp: n.timestamp
                             });
                         }
                     }
@@ -1236,16 +1266,66 @@
             }
 
             for (const node of globalNodes) {
-                // Must have location
-                if (!node.location || typeof node.location.latitude !== 'number') continue;
+                let includeNode = false;
+                let suffixText = "";
 
-                const dist = calcCrow(selLat, selLon, node.location.latitude, node.location.longitude);
-                if (dist <= radiusKm) {
-                    // Node is within radius! Add to prefix map
+                // Averiguar se tem localização válida
+                let hasValidLoc = node.location && typeof node.location.latitude === 'number' && node.location.latitude !== 0;
+                
+                // Salvaguarda caso os nós da API venham com as coordenadas apenas no payload decodificado
+                if (!hasValidLoc && node.decoded_payload && typeof node.decoded_payload.lat === 'number' && node.decoded_payload.lat !== 0) {
+                    hasValidLoc = true;
+                    node.location = { latitude: node.decoded_payload.lat, longitude: node.decoded_payload.lon };
+                }
+
+                if (!hasValidLoc) {
+                    // O nó não tem GPS fiável (0,0 ou null), assumimos por precaução que ele bloqueia o seu prefixo
+                    includeNode = true;
+                    suffixText = `<br><span style="font-size:10px; opacity:0.8; margin-left:12px;">(sem localização)</span>`;
+                } else {
+                    const lat = node.location.latitude;
+                    const lon = node.location.longitude;
+                    
+                    // Box Validation (Portugal Continental, Açores e Madeira)
+                    // BBOX aproximada com margens seguras (usada na infraestrutura do Bot-MoçaFaneira)
+                    const isOutsideBox = (lat < 30.0 || lat > 43.5 || lon < -32.0 || lon > -6.0);
+
+                    if (isOutsideBox) {
+                        includeNode = true;
+                        suffixText = `<br><span style="font-size:10px; opacity:0.8; margin-left:12px; color: var(--error-color);">(localização fora)</span>`;
+                    } else {
+                        const dist = calcCrow(selLat, selLon, lat, lon);
+                        if (dist <= radiusKm) {
+                            includeNode = true;
+                        }
+                    }
+                }
+
+                if (includeNode) {
+                    // Adicionar ao mapa de prefixos (seja pela distância ou pela ausência de GPS)
                     if (node.public_key && node.public_key.length >= 2) {
                         const prefix = node.public_key.substring(0, 2).toUpperCase();
                         if (prefixMap[prefix]) {
-                            prefixMap[prefix].push(node.name || "Nó Desconhecido");
+                            let dateStr = "";
+                            const timeVal = node.last_seen || node.timestamp || (node.decoded_payload && node.decoded_payload.timestamp) || null;
+                            if (timeVal) {
+                                let d = new Date(timeVal);
+                                if (typeof timeVal === 'number' && timeVal < 9999999999) {
+                                    d = new Date(timeVal * 1000); // converter unix epoch seconds
+                                }
+                                if (!isNaN(d.valueOf())) {
+                                    const yyyy = d.getFullYear();
+                                    const mm = String(d.getMonth() + 1).padStart(2, '0');
+                                    const dd = String(d.getDate()).padStart(2, '0');
+                                    const hh = String(d.getHours()).padStart(2, '0');
+                                    const min = String(d.getMinutes()).padStart(2, '0');
+                                    const ss = String(d.getSeconds()).padStart(2, '0');
+                                    dateStr = `<br><span style="font-size:10px; opacity:0.8; margin-left:12px;">atualizado: ${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}</span>`;
+                                }
+                            }
+
+                            const nodeText = (node.name || "Nó Desconhecido") + suffixText + dateStr;
+                            prefixMap[prefix].push(nodeText);
                         }
                     }
                 }
@@ -1270,7 +1350,7 @@
                             cell.classList.add('free');
                             const tooltip = document.createElement('div');
                             tooltip.className = 'cell-tooltip';
-                            tooltip.innerText = "Clique para gerar\nchave: " + hex;
+                            tooltip.innerHTML = "Clique para gerar<br>chave: " + hex;
                             cell.appendChild(tooltip);
                             // Click opens intermediate customization screen
                             cell.addEventListener('click', () => {
@@ -1287,22 +1367,22 @@
                             const tooltip = document.createElement('div');
                             tooltip.className = 'cell-tooltip';
                             tooltip.style.textAlign = 'left';
-                            tooltip.innerText = "Em uso por:\n• " + nodesInPrefix[0];
+                            tooltip.innerHTML = "Em uso por:<br>• " + nodesInPrefix[0];
                             cell.appendChild(tooltip);
                         } else {
                             cell.classList.add('many');
                             const tooltip = document.createElement('div');
                             tooltip.className = 'cell-tooltip';
                             tooltip.style.textAlign = 'left';
-                            let txt = `${nodesInPrefix.length} Nós utilizam:\n` + nodesInPrefix.map(n => `• ${n}`).join('\n');
-                            tooltip.innerText = txt;
+                            let txt = `<b>${nodesInPrefix.length} Nós utilizam:</b><br>` + nodesInPrefix.map(n => `• ${n}`).join('<br>');
+                            tooltip.innerHTML = txt;
                             cell.appendChild(tooltip);
                         }
                     }
 
                     const tooltips = cell.querySelectorAll('.cell-tooltip');
                     tooltips.forEach(tp => {
-                        if (row < 4) tp.classList.add('tooltip-bottom'); // Primeiras 4 linhas abrem para baixo
+                        if (row < 6) tp.classList.add('tooltip-bottom'); // Primeiras 6 linhas abrem para baixo
                         if (col < 3) tp.classList.add('tooltip-right');  // Primeiras 3 colunas abrem para a direita
                         if (col > 12) tp.classList.add('tooltip-left');  // Últimas 3 colunas abrem para a esquerda
                     });
