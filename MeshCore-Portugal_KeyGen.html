@@ -1166,7 +1166,10 @@
                             const hasForeignRegion = n.regions.some(r => r !== 'LIS' && r !== 'OPO');
                             if (hasForeignRegion) continue;
                         }
-                        
+
+                        // Exclude nodes that are not infrastructure (only keep Repeaters = 2 or Room Servers = 3)
+                        if (n.device_role !== 2 && n.device_role !== 3) continue;
+
                         uniqueMap.set(n.public_key, n);
                     }
                 }
@@ -1187,7 +1190,7 @@
                     else if (timeVal === '2w') days = 14;
                     else if (timeVal === '1m') days = 30;
                     
-                    const fallbackUrl = `https://www.meshcore.pt/api/nodes/list?days=${days}&excludeUsers=false&v=1`;
+                    const fallbackUrl = `https://www.meshcore.pt/api/nodes/list?days=${days}&excludeUsers=true&v=1`;
                     const resFallback = await fetch(fallbackUrl);
                     const dataFallback = await resFallback.json();
                     
