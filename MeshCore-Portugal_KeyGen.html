@@ -814,12 +814,20 @@
                 
                 <div id="preGenForm" style="margin-bottom: 25px;">
                     <h3 style="margin-top: 0; margin-bottom: 14px;">3. Personalizar Chave (Opcional)</h3>
-                    <p id="preGenDesc" style="margin-bottom: 20px; color: var(--text-secondary); line-height: 1.6; font-size: 14px;">O prefixo escolhido aparenta estar livre geográficamente. Pode manter o prefixo exato sugerido ou acrescentar os seus próprios caracteres adicionais no fim se desejar criar uma <em>Vanity Key</em> detalhada (apenas hexadecimal: [0-9, A-F]). <br><br><b>Nota de Performance:</b> Quanto mais caracteres adicionar, exponencialmente mais tempo de CPU o seu computador necessitará para a descobrir.</p>
+                    <p id="preGenDesc" style="margin-bottom: 20px; color: var(--text-secondary); line-height: 1.6; font-size: 14px;">O prefixo escolhido aparenta estar livre geográficamente. Pode manter o prefixo exato sugerido ou acrescentar os seus próprios caracteres adicionais no fim se desejar criar uma <em>Vanity Key</em> detalhada (apenas hexadecimal: [0-9, A-F]).</p>
+
+                    <div id="existingNodesContainer" style="display: none; margin-bottom: 20px; padding: 12px; background: rgba(252, 129, 129, 0.1); border-left: 4px solid var(--cell-many); border-radius: 4px; font-size: 13px; color: var(--text-secondary);">
+                        <strong style="color: var(--text-main); display: block; margin-bottom: 6px;">Nós existentes com este prefixo:</strong>
+                        <ul id="existingNodesList" style="margin: 0; padding-left: 20px; line-height: 1.5;"></ul>
+                    </div>
+
+                    <p style="margin-bottom: 20px; color: var(--text-secondary); line-height: 1.6; font-size: 14px;"><b>Nota de Performance:</b> Quanto mais caracteres adicionar, exponencialmente mais tempo de CPU o seu computador necessitará para a descobrir. Tem um limite máximo de adição de <b>+6 caracteres</b> (perfazendo um total máximo de 8 caracteres, ou seja, 4 bytes).</p>
+                    
                     <div class="form-group" style="max-width: 380px;">
                         <label>Prefixo Hexadecimal Desejado</label>
                         <div style="display: flex; align-items: stretch; background: var(--input-bg); border: 2px solid var(--border-color); border-radius: 6px; overflow: hidden; transition: all 0.3s ease;" id="customPrefixWrapper">
                             <div id="basePrefixDisplay" style="padding: 12px 2px 12px 14px; font-size: 16px; letter-spacing: 2px; font-family: 'Courier New', monospace; background: rgba(120, 120, 120, 0.1); color: var(--text-secondary); pointer-events: none; font-weight: bold; border-right: 1px dotted var(--border-color);"></div>
-                            <input type="text" id="chosenPrefix" oninput="updateDifficultyEstimate(); this.value = this.value.replace(/[^0-9A-Fa-f]/g, '');" style="border: none; background: transparent; padding: 12px 14px 12px 8px; flex: 1; outline: none; color: var(--text-main); font-size: 16px; letter-spacing: 2px; font-family: 'Courier New', monospace; text-transform: uppercase; width: 100%; box-shadow: none;" placeholder="[Opcional]" maxlength="60" onfocus="document.getElementById('customPrefixWrapper').style.borderColor='var(--input-focus)'; document.getElementById('customPrefixWrapper').style.boxShadow='0 0 0 3px var(--accent-glow)';" onblur="document.getElementById('customPrefixWrapper').style.borderColor='var(--border-color)'; document.getElementById('customPrefixWrapper').style.boxShadow='none';">
+                            <input type="text" id="chosenPrefix" oninput="updateDifficultyEstimate(); this.value = this.value.replace(/[^0-9A-Fa-f]/g, '');" style="border: none; background: transparent; padding: 12px 14px 12px 8px; flex: 1; outline: none; color: var(--text-main); font-size: 16px; letter-spacing: 2px; font-family: 'Courier New', monospace; text-transform: uppercase; width: 100%; box-shadow: none;" placeholder="[Opcional]" maxlength="6" onfocus="document.getElementById('customPrefixWrapper').style.borderColor='var(--input-focus)'; document.getElementById('customPrefixWrapper').style.boxShadow='0 0 0 3px var(--accent-glow)';" onblur="document.getElementById('customPrefixWrapper').style.borderColor='var(--border-color)'; document.getElementById('customPrefixWrapper').style.boxShadow='none';">
                         </div>
                     </div>
                     
@@ -1348,23 +1356,13 @@
                         cell.classList.add('reserved');
                         cell.title = "Protocolo Reservado";
                     } else {
-                        const nodesInPrefix = prefixMap[hex];
+                        const nodesInPrefix = prefixMap[hex] || [];
                         if (nodesInPrefix.length === 0) {
                             cell.classList.add('free');
                             const tooltip = document.createElement('div');
                             tooltip.className = 'cell-tooltip';
                             tooltip.innerHTML = "Clique para gerar<br>chave: " + hex;
                             cell.appendChild(tooltip);
-                            // Click opens intermediate customization screen
-                            cell.addEventListener('click', () => {
-                                document.getElementById('basePrefixDisplay').innerText = hex;
-                                document.getElementById('chosenPrefix').value = '';
-                                document.getElementById('preGenDesc').innerHTML = "O prefixo escolhido aparenta estar livre geográficamente. Pode manter o prefixo exato sugerido ou acrescentar os seus próprios caracteres adicionais no fim se desejar criar uma <em>Vanity Key</em> detalhada (apenas hexadecimal: [0-9, A-F]). <br><br><b>Nota de Performance:</b> Quanto mais caracteres adicionar, exponencialmente mais tempo de CPU o seu computador necessitará para a descobrir.";
-                                document.getElementById('preGenForm').style.display = 'block';
-                                document.getElementById('postGenResults').style.display = 'none';
-                                switchStep('step3');
-                                updateDifficultyEstimate();
-                            });
                         } else if (nodesInPrefix.length === 1) {
                             cell.classList.add('one');
                             const tooltip = document.createElement('div');
@@ -1381,6 +1379,30 @@
                             tooltip.innerHTML = txt;
                             cell.appendChild(tooltip);
                         }
+
+                        // Click opens intermediate customization screen for any unreserved cell
+                        cell.addEventListener('click', () => {
+                            document.getElementById('basePrefixDisplay').innerText = hex;
+                            document.getElementById('chosenPrefix').value = '';
+                            
+                            const descEl = document.getElementById('preGenDesc');
+                            const nodesContainer = document.getElementById('existingNodesContainer');
+                            const nodesList = document.getElementById('existingNodesList');
+                            
+                            if (nodesInPrefix.length === 0) {
+                                descEl.innerHTML = "O prefixo escolhido aparenta estar livre geográficamente. Pode manter o prefixo exato sugerido ou acrescentar os seus próprios caracteres adicionais no fim se desejar criar uma <em>Vanity Key</em> detalhada (apenas hexadecimal: [0-9, A-F]).";
+                                nodesContainer.style.display = 'none';
+                            } else {
+                                descEl.innerHTML = "O prefixo escolhido já é utilizado por pelo menos um nó da rede. Pode manter o prefixo exato sugerido ou acrescentar os seus próprios caracteres adicionais no fim se desejar criar uma <em>Vanity Key</em> detalhada (apenas hexadecimal: [0-9, A-F]).";
+                                nodesContainer.style.display = 'block';
+                                nodesList.innerHTML = nodesInPrefix.map(n => `<li style="margin-bottom: 4px;">${n}</li>`).join('');
+                            }
+                            
+                            document.getElementById('preGenForm').style.display = 'block';
+                            document.getElementById('postGenResults').style.display = 'none';
+                            switchStep('step3');
+                            updateDifficultyEstimate();
+                        });
                     }
 
                     const tooltips = cell.querySelectorAll('.cell-tooltip');
