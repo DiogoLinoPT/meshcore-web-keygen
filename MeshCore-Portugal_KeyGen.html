@@ -271,6 +271,29 @@
             font-size: 14px;
         }
 
+        .cell {
+            background-color: var(--cell-free);
+            color: var(--text-main);
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .cell-4char {
+            font-size: 10px;
+            letter-spacing: -0.5px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         .btn:hover:not(:disabled) {
             background-color: var(--accent-hover);
         }
@@ -765,8 +788,8 @@
                         <label>Filtro Temporal (Última atividade)</label>
                         <select id="timeFilter" onchange="refreshApiData()">
                             <option value="1d">1 dia</option>
-                            <option value="3d" selected>3 dias</option>
-                            <option value="1w">1 semana</option>
+                            <option value="3d">3 dias</option>
+                            <option value="1w" selected>1 semana</option>
                             <option value="2w">2 semanas</option>
                             <option value="1m">1 mês</option>
                         </select>
@@ -782,6 +805,13 @@
                             <span>100km</span><span>250km</span><span>400km</span><span>600km</span><span>1000km</span>
                         </div>
                     </div>
+                </div>
+
+                <div style="margin-top: 15px; margin-bottom: 15px; padding: 12px; background: rgba(0, 0, 0, 0.2); border-radius: 6px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-main); font-size: 14px;">
+                        <input type="checkbox" id="use2BytePrefix" style="width: 16px; height: 16px; accent-color: var(--accent-glow);">
+                        <strong>Utilizar Prefixo/ID de 2 bytes</strong> <span style="font-size: 12px; color: var(--text-secondary);">(Ativa o passo intermédio para escolher o 2º byte do prefixo)</span>
+                    </label>
                 </div>
 
                 <div class="matrix-legend">
@@ -809,11 +839,42 @@
                 </div>
             </div>
 
+            <!-- STEP 2b: Second Byte Matrix -->
+            <div id="step2b" class="wizard-step">
+                <div class="status-header" style="margin-bottom: 20px;">
+                    <h3 id="step2bTitle" style="margin: 0;">3. Disponibilidade de prefixos/IDs (2º byte)</h3>
+                </div>
+
+                <div style="margin-bottom: 20px; padding: 12px 16px; background: rgba(0, 150, 255, 0.05); border: 1px solid rgba(0, 150, 255, 0.2); border-left: 4px solid var(--accent-glow); border-radius: 6px; font-size: 14px;">
+                    <strong style="color: var(--text-main);">1º Byte Selecionado:</strong> <span id="firstByteDisplay" style="font-family: monospace; font-size: 16px; color: var(--accent-glow); font-weight: bold; margin-left: 8px;"></span>
+                </div>
+
+                <div class="matrix-legend">
+                    <div class="legend-item">
+                        <div class="legend-box" style="background:var(--cell-free)"></div> Disponível
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box" style="background:var(--cell-one)"></div> 1 Nó Encontrado
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box" style="background:var(--cell-many)"></div> 2+ Nós Encontrados
+                    </div>
+                </div>
+
+                <div class="matrix-wrapper">
+                    <div class="matrix" id="hexMatrix2"></div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; margin-top: 25px;">
+                    <button class="btn btn-outline" onclick="switchStep('step2')">🡠 Voltar à 1ª Matriz</button>
+                </div>
+            </div>
+
             <!-- STEP 3 & 4: Customization & Results -->
             <div id="step3" class="wizard-step">
                 
                 <div id="preGenForm" style="margin-bottom: 25px;">
-                    <h3 style="margin-top: 0; margin-bottom: 14px;">3. Personalizar Chave (Opcional)</h3>
+                    <h3 id="stepCustomizeTitle" style="margin-top: 0; margin-bottom: 14px;">3. Personalizar Chave (Opcional)</h3>
                     <p id="preGenDesc" style="margin-bottom: 20px; color: var(--text-secondary); line-height: 1.6; font-size: 14px;">O prefixo escolhido aparenta estar livre geográficamente. Pode manter o prefixo exato sugerido ou acrescentar os seus próprios caracteres adicionais no fim se desejar criar uma <em>Vanity Key</em> detalhada (apenas hexadecimal: [0-9, A-F]).</p>
 
                     <div id="existingNodesContainer" style="display: none; margin-bottom: 20px; padding: 12px; background: rgba(252, 129, 129, 0.1); border-left: 4px solid var(--cell-many); border-radius: 4px; font-size: 13px; color: var(--text-secondary);">
@@ -821,7 +882,7 @@
                         <ul id="existingNodesList" style="margin: 0; padding-left: 20px; line-height: 1.5;"></ul>
                     </div>
 
-                    <p style="margin-bottom: 20px; color: var(--text-secondary); line-height: 1.6; font-size: 14px;"><b>Nota de Performance:</b> Quanto mais caracteres adicionar, exponencialmente mais tempo de CPU o seu computador necessitará para a descobrir. Tem um limite máximo de adição de <b>+6 caracteres</b> (perfazendo um total máximo de 8 caracteres, ou seja, 4 bytes).</p>
+                    <p id="perfNote" style="margin-bottom: 20px; color: var(--text-secondary); line-height: 1.6; font-size: 14px;"><b>Nota de Performance:</b> Quanto mais caracteres adicionar, exponencialmente mais tempo de CPU o seu computador necessitará para a descobrir. Tem um limite máximo de adição de <b>+6 caracteres</b> (perfazendo um total máximo de 8 caracteres, ou seja, 4 bytes).</p>
                     
                     <div class="form-group" style="max-width: 380px;">
                         <label>Prefixo Hexadecimal Desejado</label>
@@ -841,7 +902,7 @@
 
                 <div id="postGenResults" style="display: none;">
                     <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 20px;">
-                        <h3 style="margin: 0;">4. Resultados da Geração</h3>
+                        <h3 id="stepResultsTitle" style="margin: 0;">4. Resultados da Geração</h3>
                         <span id="genStatusBadge" class="status-badge">Idle</span>
                     </div>
 
@@ -911,7 +972,7 @@
     <div class="footer">
         <div style="margin-bottom: 5px;">💻 <a href="https://github.com/DiogoLinoPT/meshcore-web-keygen" target="_blank"
                 rel="noopener" style="text-decoration: underline;">Source code at Github</a> <span
-                style="opacity: 0.7; font-size: 0.9em; margin-left: 5px;">v1.1.1</span></div>
+                style="opacity: 0.7; font-size: 0.9em; margin-left: 5px;">v1.2.0</span></div>
         <div style="font-size: 0.9em; opacity: 0.8;">Base engine by <a
                 href="https://github.com/agessaman/meshcore-web-keygen" target="_blank" rel="noopener">agessaman</a>.
             Tailored for MeshCore Portugal.</div>
@@ -1073,8 +1134,11 @@
 
         function cancelPreGen() {
             const isMobileDevice = document.getElementById('isMobileDevice').checked;
+            const use2Byte = document.getElementById('use2BytePrefix').checked;
             if (isMobileDevice) {
                 switchStep('step1');
+            } else if (use2Byte) {
+                switchStep('step2b');
             } else {
                 switchStep('step2');
             }
@@ -1082,6 +1146,7 @@
 
         function goBackFromResults() {
             const isMobileDevice = document.getElementById('isMobileDevice').checked;
+            const use2Byte = document.getElementById('use2BytePrefix').checked;
             
             // Repor visibilidade para que na próxima geração o ecrã venha no formulário inicial
             document.getElementById('postGenResults').style.display = 'none';
@@ -1089,15 +1154,21 @@
 
             if (isMobileDevice) {
                 switchStep('step1');
+            } else if (use2Byte) {
+                switchStep('step2b');
             } else {
                 switchStep('step2');
             }
         }
 
         function skipToGeneration() {
+            document.getElementById('stepCustomizeTitle').innerText = "2. Personalizar Chave (Opcional)";
+            document.getElementById('stepResultsTitle').innerText = "3. Resultados da Geração";
             document.getElementById('basePrefixDisplay').innerText = '0100';
             document.getElementById('chosenPrefix').value = '';
-            document.getElementById('preGenDesc').innerHTML = "O prefixo <b>0100</b> é a norma para repetidores móveis em Portugal, pelo que existirão dezenas de nós com este mesmo prefixo.<br><br>Pode manter o prefixo exato sugerido ou acrescentar os seus próprios caracteres adicionais no fim se desejar criar uma <em>Vanity Key</em> mais detalhada.<br><br><b>Nota de Performance:</b> Quanto mais caracteres adicionar, exponencialmente mais tempo de CPU o seu computador necessitará para a descobrir.";
+            document.getElementById('chosenPrefix').maxLength = 4;
+            document.getElementById('preGenDesc').innerHTML = "O prefixo <b>0100</b> é a norma para repetidores móveis em Portugal, pelo que existirão dezenas de nós com este mesmo prefixo.<br><br>Pode manter o prefixo exato sugerido ou acrescentar os seus próprios caracteres adicionais no fim se desejar criar uma <em>Vanity Key</em> mais detalhada.";
+            document.getElementById('perfNote').innerHTML = "<b>Nota de Performance:</b> Quanto mais caracteres adicionar, exponencialmente mais tempo de CPU o seu computador necessitará para a descobrir. Tem um limite máximo de adição de <b>+4 caracteres</b> (perfazendo um total máximo de 8 caracteres, ou seja, 4 bytes).";
             document.getElementById('preGenForm').style.display = 'block';
             document.getElementById('postGenResults').style.display = 'none';
             switchStep('step3');
@@ -1120,6 +1191,7 @@
 
         // --- API & DATA LOGIC ---
         let globalNodes = [];
+        let selectedFirstByte = '';
         const RESERVED_PREFIXES = ['00', '01', 'FF'];
 
         // Slider Steps Enforcer
@@ -1382,26 +1454,44 @@
 
                         // Click opens intermediate customization screen for any unreserved cell
                         cell.addEventListener('click', () => {
-                            document.getElementById('basePrefixDisplay').innerText = hex;
-                            document.getElementById('chosenPrefix').value = '';
+                            const use2Byte = document.getElementById('use2BytePrefix').checked;
                             
-                            const descEl = document.getElementById('preGenDesc');
-                            const nodesContainer = document.getElementById('existingNodesContainer');
-                            const nodesList = document.getElementById('existingNodesList');
-                            
-                            if (nodesInPrefix.length === 0) {
-                                descEl.innerHTML = "O prefixo escolhido aparenta estar livre geográficamente. Pode manter o prefixo exato sugerido ou acrescentar os seus próprios caracteres adicionais no fim se desejar criar uma <em>Vanity Key</em> detalhada (apenas hexadecimal: [0-9, A-F]).";
-                                nodesContainer.style.display = 'none';
+                            if (use2Byte) {
+                                selectedFirstByte = hex;
+                                document.getElementById('stepCustomizeTitle').innerText = "4. Personalizar Chave (Opcional)";
+                                document.getElementById('stepResultsTitle').innerText = "5. Resultados da Geração";
+                                document.getElementById('firstByteDisplay').innerText = hex;
+                                renderMatrix2();
+                                switchStep('step2b');
                             } else {
-                                descEl.innerHTML = "O prefixo escolhido já é utilizado por pelo menos um nó da rede. Pode manter o prefixo exato sugerido ou acrescentar os seus próprios caracteres adicionais no fim se desejar criar uma <em>Vanity Key</em> detalhada (apenas hexadecimal: [0-9, A-F]).";
-                                nodesContainer.style.display = 'block';
-                                nodesList.innerHTML = nodesInPrefix.map(n => `<li style="margin-bottom: 4px;">${n}</li>`).join('');
+                                document.getElementById('stepCustomizeTitle').innerText = "3. Personalizar Chave (Opcional)";
+                                document.getElementById('stepResultsTitle').innerText = "4. Resultados da Geração";
+                                
+                                document.getElementById('basePrefixDisplay').innerText = hex;
+                                const chosenPrefixInput = document.getElementById('chosenPrefix');
+                                chosenPrefixInput.value = '';
+                                chosenPrefixInput.maxLength = 6;
+                                
+                                const descEl = document.getElementById('preGenDesc');
+                                const nodesContainer = document.getElementById('existingNodesContainer');
+                                const nodesList = document.getElementById('existingNodesList');
+                                
+                                if (nodesInPrefix.length === 0) {
+                                    descEl.innerHTML = "O prefixo escolhido aparenta estar livre geográficamente. Pode manter o prefixo exato sugerido ou acrescentar os seus próprios caracteres adicionais no fim se desejar criar uma <em>Vanity Key</em> detalhada (apenas hexadecimal: [0-9, A-F]).";
+                                    nodesContainer.style.display = 'none';
+                                } else {
+                                    descEl.innerHTML = "O prefixo escolhido já é utilizado por pelo menos um nó da rede. Pode manter o prefixo exato sugerido ou acrescentar os seus próprios caracteres adicionais no fim se desejar criar uma <em>Vanity Key</em> detalhada (apenas hexadecimal: [0-9, A-F]).";
+                                    nodesContainer.style.display = 'block';
+                                    nodesList.innerHTML = nodesInPrefix.map(n => `<li style="margin-bottom: 4px;">${n}</li>`).join('');
+                                }
+                                
+                                document.getElementById('perfNote').innerHTML = "<b>Nota de Performance:</b> Quanto mais caracteres adicionar, exponencialmente mais tempo de CPU o seu computador necessitará para a descobrir. Tem um limite máximo de adição de <b>+6 caracteres</b> (perfazendo um total máximo de 8 caracteres, ou seja, 4 bytes).";
+                                
+                                document.getElementById('preGenForm').style.display = 'block';
+                                document.getElementById('postGenResults').style.display = 'none';
+                                switchStep('step3');
+                                updateDifficultyEstimate();
                             }
-                            
-                            document.getElementById('preGenForm').style.display = 'block';
-                            document.getElementById('postGenResults').style.display = 'none';
-                            switchStep('step3');
-                            updateDifficultyEstimate();
                         });
                     }
 
@@ -1410,6 +1500,161 @@
                         if (row < 6) tp.classList.add('tooltip-bottom'); // Primeiras 6 linhas abrem para baixo
                         if (col < 3) tp.classList.add('tooltip-right');  // Primeiras 3 colunas abrem para a direita
                         if (col > 12) tp.classList.add('tooltip-left');  // Últimas 3 colunas abrem para a esquerda
+                    });
+
+                    matrixContainer.appendChild(cell);
+                }
+            }
+        }
+
+        function renderMatrix2() {
+            const matrixContainer = document.getElementById('hexMatrix2');
+            matrixContainer.innerHTML = '';
+
+            const distIdx = parseInt(document.getElementById('distFilter').value);
+            const radiusKm = allowedSteps[distIdx];
+
+            // Build dictionary of prefix -> list of nodes for the selected first byte
+            const prefixMap = {};
+            for (let i = 0; i < 256; i++) {
+                const hex2 = i.toString(16).padStart(2, '0').toUpperCase();
+                prefixMap[selectedFirstByte + hex2] = [];
+            }
+
+            for (const node of globalNodes) {
+                let includeNode = false;
+                let suffixText = "";
+
+                // Averiguar se tem localização válida
+                let hasValidLoc = node.location && typeof node.location.latitude === 'number' && node.location.latitude !== 0;
+                
+                // Salvaguarda caso os nós da API venham com as coordenadas apenas no payload decodificado
+                if (!hasValidLoc && node.decoded_payload && typeof node.decoded_payload.lat === 'number' && node.decoded_payload.lat !== 0) {
+                    hasValidLoc = true;
+                    node.location = { latitude: node.decoded_payload.lat, longitude: node.decoded_payload.lon };
+                }
+
+                if (!hasValidLoc) {
+                    // O nó não tem GPS fiável (0,0 ou null), assumimos por precaução que ele bloqueia o seu prefixo
+                    includeNode = true;
+                    suffixText = `<br><span style="font-size:10px; opacity:0.8; margin-left:12px;">(sem localização)</span>`;
+                } else {
+                    const lat = node.location.latitude;
+                    const lon = node.location.longitude;
+                    
+                    // Box Validation (Portugal Continental, Açores e Madeira)
+                    const isOutsideBox = (lat < 30.0 || lat > 43.5 || lon < -32.0 || lon > -6.0);
+
+                    if (isOutsideBox) {
+                        includeNode = true;
+                        suffixText = `<br><span style="font-size:10px; opacity:0.8; margin-left:12px; color: var(--error-color);">(localização fora)</span>`;
+                    } else {
+                        const dist = calcCrow(selLat, selLon, lat, lon);
+                        if (dist <= radiusKm) {
+                            includeNode = true;
+                        }
+                    }
+                }
+
+                if (includeNode) {
+                    if (node.public_key && node.public_key.length >= 4) {
+                        const prefix = node.public_key.substring(0, 4).toUpperCase();
+                        if (prefix.startsWith(selectedFirstByte)) {
+                            if (prefixMap[prefix]) {
+                                let dateStr = "";
+                                const timeVal = node.last_seen || node.timestamp || (node.decoded_payload && node.decoded_payload.timestamp) || null;
+                                if (timeVal) {
+                                    let d = new Date(timeVal);
+                                    if (typeof timeVal === 'number' && timeVal < 9999999999) {
+                                        d = new Date(timeVal * 1000);
+                                    }
+                                    if (!isNaN(d.valueOf())) {
+                                        const yyyy = d.getFullYear();
+                                        const mm = String(d.getMonth() + 1).padStart(2, '0');
+                                        const dd = String(d.getDate()).padStart(2, '0');
+                                        const hh = String(d.getHours()).padStart(2, '0');
+                                        const min = String(d.getMinutes()).padStart(2, '0');
+                                        const ss = String(d.getSeconds()).padStart(2, '0');
+                                        dateStr = `<br><span style="font-size:10px; opacity:0.8; margin-left:12px;">atualizado: ${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}</span>`;
+                                    }
+                                }
+
+                                const nodeText = (node.name || "Nó Desconhecido") + suffixText + dateStr;
+                                prefixMap[prefix].push(nodeText);
+                            }
+                        }
+                    }
+                }
+            }
+
+            for (let row = 0; row < 16; row++) {
+                for (let col = 0; col < 16; col++) {
+                    const dec = row * 16 + col;
+                    const hex2 = dec.toString(16).padStart(2, '0').toUpperCase();
+                    const fullPrefix = selectedFirstByte + hex2;
+
+                    const cell = document.createElement('div');
+                    cell.className = 'cell cell-4char';
+                    cell.innerText = fullPrefix;
+                    cell.setAttribute('data-prefix', fullPrefix);
+
+                    // No reserved prefixes for the second byte currently, all 256 are valid.
+                    const nodesInPrefix = prefixMap[fullPrefix] || [];
+                    if (nodesInPrefix.length === 0) {
+                        cell.classList.add('free');
+                        const tooltip = document.createElement('div');
+                        tooltip.className = 'cell-tooltip';
+                        tooltip.innerHTML = "Clique para gerar<br>chave: " + fullPrefix;
+                        cell.appendChild(tooltip);
+                    } else if (nodesInPrefix.length === 1) {
+                        cell.classList.add('one');
+                        const tooltip = document.createElement('div');
+                        tooltip.className = 'cell-tooltip';
+                        tooltip.style.textAlign = 'left';
+                        tooltip.innerHTML = "Em uso por:<br>• " + nodesInPrefix[0];
+                        cell.appendChild(tooltip);
+                    } else {
+                        cell.classList.add('many');
+                        const tooltip = document.createElement('div');
+                        tooltip.className = 'cell-tooltip';
+                        tooltip.style.textAlign = 'left';
+                        let txt = `<b>${nodesInPrefix.length} Nós utilizam:</b><br>` + nodesInPrefix.map(n => `• ${n}`).join('<br>');
+                        tooltip.innerHTML = txt;
+                        cell.appendChild(tooltip);
+                    }
+
+                    cell.addEventListener('click', () => {
+                        document.getElementById('basePrefixDisplay').innerText = fullPrefix;
+                        const chosenPrefixInput = document.getElementById('chosenPrefix');
+                        chosenPrefixInput.value = '';
+                        chosenPrefixInput.maxLength = 4;
+                        
+                        const descEl = document.getElementById('preGenDesc');
+                        const nodesContainer = document.getElementById('existingNodesContainer');
+                        const nodesList = document.getElementById('existingNodesList');
+                        
+                        if (nodesInPrefix.length === 0) {
+                            descEl.innerHTML = "O prefixo escolhido aparenta estar livre geográficamente. Pode manter o prefixo exato sugerido ou acrescentar os seus próprios caracteres adicionais no fim se desejar criar uma <em>Vanity Key</em> detalhada (apenas hexadecimal: [0-9, A-F]).";
+                            nodesContainer.style.display = 'none';
+                        } else {
+                            descEl.innerHTML = "O prefixo escolhido já é utilizado por pelo menos um nó da rede. Pode manter o prefixo exato sugerido ou acrescentar os seus próprios caracteres adicionais no fim se desejar criar uma <em>Vanity Key</em> detalhada (apenas hexadecimal: [0-9, A-F]).";
+                            nodesContainer.style.display = 'block';
+                            nodesList.innerHTML = nodesInPrefix.map(n => `<li style="margin-bottom: 4px;">${n}</li>`).join('');
+                        }
+                        
+                        document.getElementById('perfNote').innerHTML = "<b>Nota de Performance:</b> Quanto mais caracteres adicionar, exponencialmente mais tempo de CPU o seu computador necessitará para a descobrir. Tem um limite máximo de adição de <b>+4 caracteres</b> (perfazendo um total máximo de 8 caracteres, ou seja, 4 bytes).";
+                        
+                        document.getElementById('preGenForm').style.display = 'block';
+                        document.getElementById('postGenResults').style.display = 'none';
+                        switchStep('step3');
+                        updateDifficultyEstimate();
+                    });
+
+                    const tooltips = cell.querySelectorAll('.cell-tooltip');
+                    tooltips.forEach(tp => {
+                        if (row < 6) tp.classList.add('tooltip-bottom'); 
+                        if (col < 3) tp.classList.add('tooltip-right');  
+                        if (col > 12) tp.classList.add('tooltip-left');  
                     });
 
                     matrixContainer.appendChild(cell);
