@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="pt" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeshCore Portugal - Regiões - proposta do Diogo Lino</title>
+
+    <!-- Leaflet JS & CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Turf JS for Spatial calculations -->
+    <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
+
+    <style>
+        :root {
+            --bg-main: #f8f9fa;
+            --bg-card: #ffffff;
+            --text-main: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --accent-primary: #f05e16;
+            --accent-hover: #d24e10;
+            --border-color: #e0e0e0;
+            --header-bg: #e2e8f0;
+            --header-text: #1a202c;
+            --sidebar-bg: #ffffff;
+            --node-hover: #f1f5f9;
+        }
+
+        [data-theme="dark"] {
+            --bg-main: #111113;
+            --bg-card: #1a1a1c;
+            --text-main: #f8f9fa;
+            --text-secondary: #a0aec0;
+            --accent-primary: #f05e16;
+            --accent-hover: #ff7635;
+            --border-color: #2d3748;
+            --header-bg: #1a1a1c;
+            --header-text: #f8f9fa;
+            --sidebar-bg: #1a1a1c;
+            --node-hover: #2d3748;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: var(--header-bg);
+            color: var(--header-text);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--accent-primary);
+        }
+
+        .header h1 {
+            font-size: 1.5em;
+            font-weight: 700;
+        }
+
+        .header nav a {
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 600;
+            margin-right: 15px;
+        }
+        
+        .header nav a:hover {
+            text-decoration: underline;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 62px);
+        }
+
+        #map-container {
+            flex: 2;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        #sidebar {
+            flex: 1;
+            background: var(--sidebar-bg);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(0,0,0,0.02);
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .region-group {
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .region-header {
+            background: var(--bg-main);
+            padding: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .region-header:hover {
+            background: var(--node-hover);
+        }
+
+        .region-nodes {
+            display: none;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .region-nodes.open {
+            display: block;
+        }
+
+        .node-item {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9em;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .node-item:last-child {
+            border-bottom: none;
+        }
+
+        .node-item:hover {
+            background: var(--node-hover);
+            color: var(--accent-primary);
+        }
+
+        .node-id {
+            font-family: monospace;
+            color: var(--text-secondary);
+        }
+
+        .loader-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 1000;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>MeshCore Regiões (Portugal) - proposta do Diogo Lino</h1>
+    </div>
+
+    <div class="main-container">
+        <div id="map-container">
+            <div id="loader" class="loader-overlay">A carregar Nós e Fronteiras...</div>
+            <div id="map"></div>
+        </div>
+        <div id="sidebar">
+            <div class="sidebar-header">
+                <h3>Nós por Região</h3>
+                <p style="font-size: 0.85em; color: var(--text-secondary); margin-top: 5px;">
+                    Baseado em distritos expandidos (+50km). Os nós podem pertencer a múltiplas regiões sobrepostas.
+                </p>
+            </div>
+            <div class="sidebar-content" id="region-list">
+                <!-- Javascript will populate this -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let map;
+        let regionsGeoJSON;
+        let activeNodes = [];
+        let regionMapping = {}; // { "Lisboa": [node1, node2] }
+        let markers = {};
+
+        // Cores para os polígonos
+        const regionColors = ['#f05e16', '#3498db', '#9b59b6', '#2ecc71', '#f1c40f', '#e74c3c', '#1abc9c'];
+
+        function initMap() {
+            map = L.map('map').setView([39.5, -8.0], 6);
+            
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const tileUrl = isDark 
+                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' 
+                : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+            L.tileLayer(tileUrl, {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+        }
+
+        function toggleRegion(el) {
+            const content = el.nextElementSibling;
+            if(content.classList.contains('open')) {
+                content.classList.remove('open');
+                el.querySelector('.toggle-icon').innerText = '+';
+            } else {
+                content.classList.add('open');
+                el.querySelector('.toggle-icon').innerText = '-';
+            }
+        }
+
+        function focusNode(lat, lon) {
+            map.flyTo([lat, lon], 12);
+        }
+
+        async function fetchRegions() {
+            try {
+                // Fetch the static geojson we generated
+                const res = await fetch('data/pt_regions_50km.geojson');
+                regionsGeoJSON = await res.json();
+                
+                // Add polygons to map
+                let colorIndex = 0;
+                L.geoJSON(regionsGeoJSON, {
+                    style: function (feature) {
+                        const color = regionColors[colorIndex % regionColors.length];
+                        colorIndex++;
+                        return {
+                            color: color,
+                            weight: 2,
+                            opacity: 0.8,
+                            fillColor: color,
+                            fillOpacity: 0.1
+                        };
+                    },
+                    onEachFeature: function (feature, layer) {
+                        regionMapping[feature.properties.name] = []; // Initialize empty array for this region
+                    }
+                }).addTo(map);
+
+                // Add map click listener to show all overlapping regions
+                map.on('click', function(e) {
+                    const pt = turf.point([e.latlng.lng, e.latlng.lat]);
+                    const clickedRegions = [];
+                    if (regionsGeoJSON && regionsGeoJSON.features) {
+                        regionsGeoJSON.features.forEach(feature => {
+                            if (turf.booleanPointInPolygon(pt, feature)) {
+                                clickedRegions.push(feature.properties.name);
+                            }
+                        });
+                    }
+                    if (clickedRegions.length > 0) {
+                        L.popup()
+                            .setLatLng(e.latlng)
+                            .setContent(`<b>Regiões neste ponto (${clickedRegions.length}):</b><br><ul style="margin-top: 5px; padding-left: 20px;"><li>${clickedRegions.join('</li><li>')}</li></ul>`)
+                            .openOn(map);
+                    }
+                });
+
+            } catch (err) {
+                console.error("Failed to load region boundaries", err);
+            }
+        }
+
+        async function fetchNodes() {
+            // Reusing logic from MeshCore-Portugal_KeyGen.html (Last 7 days)
+            const date = new Date();
+            date.setDate(date.getDate() - 7);
+            const updatedSinceStr = date.toISOString();
+
+            try {
+                const rawUrlLIS = `https://api.letsmesh.net/api/nodes?region=LIS&updated_since=${encodeURIComponent(updatedSinceStr)}`;
+                const rawUrlOPO = `https://api.letsmesh.net/api/nodes?region=OPO&updated_since=${encodeURIComponent(updatedSinceStr)}`;
+
+                const [resLIS, resOPO] = await Promise.all([
+                    fetch(`https://corsproxy.io/?${encodeURIComponent(rawUrlLIS)}`),
+                    fetch(`https://corsproxy.io/?${encodeURIComponent(rawUrlOPO)}`)
+                ]);
+
+                const dataLIS = await resLIS.json();
+                const dataOPO = await resOPO.json();
+
+                let combinedNodes = [];
+                if (dataLIS && dataLIS.nodes) combinedNodes = combinedNodes.concat(dataLIS.nodes);
+                if (dataOPO && dataOPO.nodes) combinedNodes = combinedNodes.concat(dataOPO.nodes);
+
+                const uniqueMap = new Map();
+                for (let n of combinedNodes) {
+                    if (n && n.public_key) {
+                        // Keep repeaters (2) and room servers (3)
+                        if (n.device_role !== 2 && n.device_role !== 3) continue;
+                        
+                        let lat = null, lon = null;
+                        if (n.position && n.position.latitude) {
+                            lat = n.position.latitude; lon = n.position.longitude;
+                        } else if (n.location && n.location.latitude) {
+                            lat = n.location.latitude; lon = n.location.longitude;
+                        } else if (n.lat) {
+                            lat = n.lat; lon = n.long || n.lon;
+                        }
+
+                        if (lat && lon) {
+                            n.latitude = lat;
+                            n.longitude = lon;
+                            uniqueMap.set(n.public_key, n);
+                        }
+                    }
+                }
+                activeNodes = Array.from(uniqueMap.values());
+            } catch(err) {
+                console.warn("Letsmesh API error, trying fallback...", err);
+                try {
+                    const fallbackUrl = `https://www.meshcore.pt/api/nodes/list?days=7&excludeUsers=true&v=1`;
+                    const resFallback = await fetch(fallbackUrl);
+                    const fallbackNodes = await resFallback.json();
+                    
+                    const uniqueMap = new Map();
+                    for (let n of fallbackNodes) {
+                        if (n && n.Id) {
+                            if (n.Role !== 2 && n.Role !== 3) continue;
+                            
+                            let lat = n.Lat || n.lat;
+                            let lon = n.Lon || n.long || n.lon;
+
+                            if (lat && lon) {
+                                uniqueMap.set(n.Id, {
+                                    public_key: n.Id,
+                                    long_name: n.LongName || n.name,
+                                    short_name: n.ShortName || n.name,
+                                    latitude: lat,
+                                    longitude: lon,
+                                    device_role: n.Role
+                                });
+                            }
+                        }
+                    }
+                    activeNodes = Array.from(uniqueMap.values());
+                } catch(e) {
+                    console.error("Fallback also failed.", e);
+                }
+            }
+        }
+
+        function calculateIntersectionsAndRender() {
+            // Draw markers on map
+            activeNodes.forEach(node => {
+                const pt = turf.point([node.longitude, node.latitude]);
+                const nodeRegions = [];
+
+                if (regionsGeoJSON && regionsGeoJSON.features) {
+                    regionsGeoJSON.features.forEach(feature => {
+                        // Fix for booleanPointInPolygon: needs standard Polygon/MultiPolygon
+                        if (turf.booleanPointInPolygon(pt, feature)) {
+                            nodeRegions.push(feature.properties.name);
+                            if (regionMapping[feature.properties.name]) {
+                                regionMapping[feature.properties.name].push(node);
+                            }
+                        }
+                    });
+                }
+
+                const marker = L.circleMarker([node.latitude, node.longitude], {
+                    radius: 5,
+                    fillColor: "#f05e16",
+                    color: "#fff",
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(map);
+                
+                const name = node.name || node.short_name || node.long_name || "Nó Desconhecido";
+                const pubKey = node.public_key;
+                const shortKey = pubKey.length > 12 ? `${pubKey.substring(0,6)} (...) ${pubKey.substring(pubKey.length-6)}` : pubKey;
+                const regionsHtml = nodeRegions.length > 0 ? `<br><br><b>Inserido em ${nodeRegions.length} Região(ões):</b><ul style="margin-top: 5px; padding-left: 20px;"><li>${nodeRegions.join('</li><li>')}</li></ul>` : '';
+                
+                marker.bindPopup(`<b>${name}</b><br><small>${shortKey}</small>${regionsHtml}`);
+                markers[node.public_key] = marker;
+            });
+
+            // Build UI
+            const listEl = document.getElementById('region-list');
+            listEl.innerHTML = '';
+
+            // Sort region names alphabetically
+            const sortedRegions = Object.keys(regionMapping).sort();
+
+            sortedRegions.forEach(regionName => {
+                const nodesInRegion = regionMapping[regionName];
+                
+                // Only show regions that have at least 1 node
+                if (nodesInRegion.length === 0) return;
+
+                // Sort nodes alphabetically by name
+                nodesInRegion.sort((a, b) => {
+                    const nA = a.name || a.short_name || a.long_name || "";
+                    const nB = b.name || b.short_name || b.long_name || "";
+                    return nA.localeCompare(nB);
+                });
+
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'region-group';
+
+                const header = document.createElement('div');
+                header.className = 'region-header';
+                header.innerHTML = `<span>${regionName} <small style="opacity:0.7">(${nodesInRegion.length})</small></span> <span class="toggle-icon">+</span>`;
+                header.onclick = () => toggleRegion(header);
+
+                const nodesContainer = document.createElement('div');
+                nodesContainer.className = 'region-nodes';
+
+                nodesInRegion.forEach(node => {
+                    const nodeEl = document.createElement('div');
+                    nodeEl.className = 'node-item';
+                    const name = node.name || node.short_name || node.long_name || "Nó Desconhecido";
+                    // Only show first 8 chars of pubkey
+                    const idSnippet = node.public_key.substring(0, 8); 
+                    
+                    nodeEl.innerHTML = `<span>${name}</span> <span class="node-id">${idSnippet}</span>`;
+                    nodeEl.onclick = () => focusNode(node.latitude, node.longitude);
+                    
+                    nodesContainer.appendChild(nodeEl);
+                });
+
+                groupDiv.appendChild(header);
+                groupDiv.appendChild(nodesContainer);
+                listEl.appendChild(groupDiv);
+            });
+        }
+
+        window.onload = async () => {
+            initMap();
+            await fetchRegions();
+            await fetchNodes();
+            document.getElementById('loader').style.display = 'none';
+            calculateIntersectionsAndRender();
+        };
+
+    </script>
+</body>
+</html>

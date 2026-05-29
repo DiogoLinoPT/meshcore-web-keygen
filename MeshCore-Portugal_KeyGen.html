@@ -972,7 +972,7 @@
     <div class="footer">
         <div style="margin-bottom: 5px;">💻 <a href="https://github.com/DiogoLinoPT/meshcore-web-keygen" target="_blank"
                 rel="noopener" style="text-decoration: underline;">Source code at Github</a> <span
-                style="opacity: 0.7; font-size: 0.9em; margin-left: 5px;">v1.2.0</span></div>
+                style="opacity: 0.7; font-size: 0.9em; margin-left: 5px;">v1.2.1</span></div>
         <div style="font-size: 0.9em; opacity: 0.8;">Base engine by <a
                 href="https://github.com/agessaman/meshcore-web-keygen" target="_blank" rel="noopener">agessaman</a>.
             Tailored for MeshCore Portugal.</div>
@@ -1171,6 +1171,7 @@
             document.getElementById('perfNote').innerHTML = "<b>Nota de Performance:</b> Quanto mais caracteres adicionar, exponencialmente mais tempo de CPU o seu computador necessitará para a descobrir. Tem um limite máximo de adição de <b>+4 caracteres</b> (perfazendo um total máximo de 8 caracteres, ou seja, 4 bytes).";
             document.getElementById('preGenForm').style.display = 'block';
             document.getElementById('postGenResults').style.display = 'none';
+            document.getElementById('existingNodesContainer').style.display = 'none';
             switchStep('step3');
             updateDifficultyEstimate();
         }
