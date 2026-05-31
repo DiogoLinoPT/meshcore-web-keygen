@@ -231,6 +231,17 @@
         // Cores para os polígonos
         const regionColors = ['#f05e16', '#3498db', '#9b59b6', '#2ecc71', '#f1c40f', '#e74c3c', '#1abc9c'];
 
+        function formatFirmwareRegion(name) {
+            return '#' + name.toLowerCase()
+                .replace(/ç/g, 'c')
+                .replace(/[ãáàâ]/g, 'a')
+                .replace(/[éê]/g, 'e')
+                .replace(/[í]/g, 'i')
+                .replace(/[óõô]/g, 'o')
+                .replace(/[ú]/g, 'u')
+                .replace(/ /g, '_');
+        }
+
         function initMap() {
             map = L.map('map').setView([39.5, -8.0], 6);
             
@@ -251,7 +262,7 @@
                 if (regionsGeoJSON && regionsGeoJSON.features) {
                     regionsGeoJSON.features.forEach(feature => {
                         if (turf.booleanPointInPolygon(pt, feature)) {
-                            clickedRegions.push(feature.properties.name);
+                            clickedRegions.push(formatFirmwareRegion(feature.properties.name));
                         }
                     });
                 }
@@ -414,7 +425,7 @@
                     regionsGeoJSON.features.forEach(feature => {
                         // Fix for booleanPointInPolygon: needs standard Polygon/MultiPolygon
                         if (turf.booleanPointInPolygon(pt, feature)) {
-                            nodeRegions.push(feature.properties.name);
+                            nodeRegions.push(formatFirmwareRegion(feature.properties.name));
                             if (regionMapping[feature.properties.name]) {
                                 regionMapping[feature.properties.name].push(node);
                             }
@@ -465,7 +476,7 @@
 
                 const header = document.createElement('div');
                 header.className = 'region-header';
-                header.innerHTML = `<span>${regionName} <small style="opacity:0.7">(${nodesInRegion.length})</small></span> <span class="toggle-icon">+</span>`;
+                header.innerHTML = `<span>${regionName} <small style="color:var(--accent-primary)">(${formatFirmwareRegion(regionName)})</small> <small style="opacity:0.7">(${nodesInRegion.length})</small></span> <span class="toggle-icon">+</span>`;
                 header.onclick = () => toggleRegion(header);
 
                 const nodesContainer = document.createElement('div');
