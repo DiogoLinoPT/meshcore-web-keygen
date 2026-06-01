@@ -207,6 +207,7 @@
                         <select id="typeSelect" style="padding: 4px; border-radius: 4px; background: var(--header-bg); color: var(--text-main); border: 1px solid var(--border-color);" onchange="changeBufferDistance()">
                             <option value="regions" selected>Distritos</option>
                             <option value="cims">Ent. Intermunicipais</option>
+                            <option value="both">Todos</option>
                         </select>
                         <select id="bufferSelect" style="padding: 4px; border-radius: 4px; background: var(--header-bg); color: var(--text-main); border: 1px solid var(--border-color);" onchange="changeBufferDistance()">
                             <option value="20" selected>Expansão: +20km</option>
@@ -299,10 +300,20 @@
         async function fetchRegions(distance = 20) {
             try {
                 const regionType = document.getElementById('typeSelect') ? document.getElementById('typeSelect').value : 'regions';
-                const filePrefix = regionType === 'cims' ? 'pt_cims_' : 'pt_regions_';
-                // Fetch the static geojson we generated
-                const res = await fetch('data/' + filePrefix + distance + 'km.geojson');
-                regionsGeoJSON = await res.json();
+                let features = [];
+
+                if (regionType === 'both' || regionType === 'regions') {
+                    const res = await fetch('data/pt_regions_' + distance + 'km.geojson');
+                    const json = await res.json();
+                    features = features.concat(json.features);
+                }
+                if (regionType === 'both' || regionType === 'cims') {
+                    const res = await fetch('data/pt_cims_' + distance + 'km.geojson');
+                    const json = await res.json();
+                    features = features.concat(json.features);
+                }
+
+                regionsGeoJSON = { type: "FeatureCollection", features: features };
                 
                 // Add polygons to map
                 let colorIndex = 0;
@@ -410,7 +421,7 @@
         async function changeBufferDistance() {
             const distance = document.getElementById('bufferSelect').value;
             const regionType = document.getElementById('typeSelect').value;
-            const typeLabel = regionType === 'regions' ? 'distritos' : 'entidades intermunicipais';
+            const typeLabel = regionType === 'regions' ? 'distritos' : (regionType === 'cims' ? 'entidades intermunicipais' : 'distritos e entidades intermunicipais');
             document.getElementById('sidebar-desc').innerText = `Baseado em ${typeLabel} expandidas (+${distance}km). Os nós podem pertencer a múltiplas regiões sobrepostas.`;
             document.getElementById('loader').style.display = 'flex';
             
