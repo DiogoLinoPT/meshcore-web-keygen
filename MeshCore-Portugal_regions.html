@@ -203,11 +203,17 @@
             <div class="sidebar-header">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <h3>Nós por Região</h3>
-                    <select id="bufferSelect" style="padding: 4px; border-radius: 4px; background: var(--header-bg); color: var(--text-main); border: 1px solid var(--border-color);" onchange="changeBufferDistance()">
-                        <option value="20" selected>Expansão: +20km</option>
-                        <option value="35">Expansão: +35km</option>
-                        <option value="50">Expansão: +50km</option>
-                    </select>
+                    <div style="display: flex; gap: 10px;">
+                        <select id="typeSelect" style="padding: 4px; border-radius: 4px; background: var(--header-bg); color: var(--text-main); border: 1px solid var(--border-color);" onchange="changeBufferDistance()">
+                            <option value="regions" selected>Distritos</option>
+                            <option value="cims">Ent. Intermunicipais</option>
+                        </select>
+                        <select id="bufferSelect" style="padding: 4px; border-radius: 4px; background: var(--header-bg); color: var(--text-main); border: 1px solid var(--border-color);" onchange="changeBufferDistance()">
+                            <option value="20" selected>Expansão: +20km</option>
+                            <option value="35">Expansão: +35km</option>
+                            <option value="50">Expansão: +50km</option>
+                        </select>
+                    </div>
                 </div>
                 <p id="sidebar-desc" style="font-size: 0.85em; color: var(--text-secondary); margin-top: 5px;">
                     Baseado em distritos expandidos (+20km). Os nós podem pertencer a múltiplas regiões sobrepostas.
@@ -239,7 +245,7 @@
                 .replace(/[í]/g, 'i')
                 .replace(/[óõô]/g, 'o')
                 .replace(/[ú]/g, 'u')
-                .replace(/ /g, '_');
+                .replace(/ /g, '-');
         }
 
         function initMap() {
@@ -292,8 +298,10 @@
 
         async function fetchRegions(distance = 20) {
             try {
+                const regionType = document.getElementById('typeSelect') ? document.getElementById('typeSelect').value : 'regions';
+                const filePrefix = regionType === 'cims' ? 'pt_cims_' : 'pt_regions_';
                 // Fetch the static geojson we generated
-                const res = await fetch('data/pt_regions_' + distance + 'km.geojson');
+                const res = await fetch('data/' + filePrefix + distance + 'km.geojson');
                 regionsGeoJSON = await res.json();
                 
                 // Add polygons to map
@@ -401,7 +409,9 @@
 
         async function changeBufferDistance() {
             const distance = document.getElementById('bufferSelect').value;
-            document.getElementById('sidebar-desc').innerText = `Baseado em distritos expandidos (+${distance}km). Os nós podem pertencer a múltiplas regiões sobrepostas.`;
+            const regionType = document.getElementById('typeSelect').value;
+            const typeLabel = regionType === 'regions' ? 'distritos' : 'entidades intermunicipais';
+            document.getElementById('sidebar-desc').innerText = `Baseado em ${typeLabel} expandidas (+${distance}km). Os nós podem pertencer a múltiplas regiões sobrepostas.`;
             document.getElementById('loader').style.display = 'flex';
             
             // Clear existing data
