@@ -238,15 +238,26 @@
         // Cores para os polígonos
         const regionColors = ['#f05e16', '#3498db', '#9b59b6', '#2ecc71', '#f1c40f', '#e74c3c', '#1abc9c'];
 
-        function formatFirmwareRegion(name) {
-            return '#' + name.toLowerCase()
-                .replace(/ç/g, 'c')
-                .replace(/[ãáàâ]/g, 'a')
-                .replace(/[éê]/g, 'e')
-                .replace(/[í]/g, 'i')
-                .replace(/[óõô]/g, 'o')
-                .replace(/[ú]/g, 'u')
-                .replace(/ /g, '-');
+        function formatFirmwareRegion(name, isCim) {
+            let clean = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ /g, '-');
+            if (isCim) {
+                if (clean === 'area-metropolitana-de-lisboa' || clean === 'area-metropolitana-do-porto') {
+                    return '#' + clean.replace('area-metropolitana-de-', 'am-').replace('area-metropolitana-do-', 'am-');
+                } else if (clean === 'regiao-autonoma-dos-acores') {
+                    return '#ra-acores';
+                } else if (clean === 'regiao-autonoma-da-madeira') {
+                    return '#ra-madeira';
+                } else {
+                    return '#cim-' + clean;
+                }
+            } else {
+                if (clean === 'regiao-autonoma-dos-acores') {
+                    return '#ra-acores';
+                } else if (clean === 'regiao-autonoma-da-madeira') {
+                    return '#ra-madeira';
+                }
+                return '#' + clean;
+            }
         }
 
         function initMap() {
@@ -269,7 +280,7 @@
                 if (regionsGeoJSON && regionsGeoJSON.features) {
                     regionsGeoJSON.features.forEach(feature => {
                         if (turf.booleanPointInPolygon(pt, feature)) {
-                            clickedRegions.push(formatFirmwareRegion(feature.properties.name));
+                            clickedRegions.push(formatFirmwareRegion(feature.properties.name, feature.properties.is_cim));
                         }
                     });
                 }
@@ -330,7 +341,9 @@
                         };
                     },
                     onEachFeature: function (feature, layer) {
-                        regionMapping[feature.properties.name] = []; // Initialize empty array for this region
+                        let isCim = feature.properties.is_cim === true;
+                        let mappingKey = feature.properties.name + (isCim ? '|cim' : '|dist');
+                        regionMapping[mappingKey] = []; // Initialize empty array for this region
                     }
                 }).addTo(map);
 
@@ -446,9 +459,12 @@
                     regionsGeoJSON.features.forEach(feature => {
                         // Fix for booleanPointInPolygon: needs standard Polygon/MultiPolygon
                         if (turf.booleanPointInPolygon(pt, feature)) {
-                            nodeRegions.push(formatFirmwareRegion(feature.properties.name));
-                            if (regionMapping[feature.properties.name]) {
-                                regionMapping[feature.properties.name].push(node);
+                            let isCim = feature.properties.is_cim === true;
+                            nodeRegions.push(formatFirmwareRegion(feature.properties.name, isCim));
+                            
+                            let mappingKey = feature.properties.name + (isCim ? '|cim' : '|dist');
+                            if (regionMapping[mappingKey]) {
+                                regionMapping[mappingKey].push(node);
                             }
                         }
                     });
@@ -476,14 +492,30 @@
             const listEl = document.getElementById('region-list');
             listEl.innerHTML = '';
 
-            // Sort region names alphabetically
-            const sortedRegions = Object.keys(regionMapping).sort();
-
-            sortedRegions.forEach(regionName => {
-                const nodesInRegion = regionMapping[regionName];
+            const sortedRegions = Object.keys(regionMapping).sort((a, b) => {
+                const aType = a.split('|')[1];
+                const bType = b.split('|')[1];
                 
-                // Only show regions that have at least 1 node
+                if (aType !== bType) {
+                    return aType === 'dist' ? -1 : 1;
+                }
+                
+                return a.localeCompare(b);
+            });
+            
+            sortedRegions.forEach(mappingKey => {
+                const nodesInRegion = regionMapping[mappingKey];
                 if (nodesInRegion.length === 0) return;
+
+                const parts = mappingKey.split('|');
+                const name = parts[0];
+                const isCim = parts[1] === 'cim';
+                const fwTag = formatFirmwareRegion(name, isCim);
+                
+                let displayName = name;
+                if (isCim && !name.startsWith('CIM') && !name.startsWith('Área') && !name.startsWith('Região Autónoma') && !name.startsWith('Península') && !name.startsWith('Grande')) {
+                    displayName = 'CIM ' + name;
+                }
 
                 // Sort nodes alphabetically by name
                 nodesInRegion.sort((a, b) => {
@@ -497,7 +529,13 @@
 
                 const header = document.createElement('div');
                 header.className = 'region-header';
-                header.innerHTML = `<span>${regionName} <small style="color:var(--accent-primary)">(${formatFirmwareRegion(regionName)})</small> <small style="opacity:0.7">(${nodesInRegion.length})</small></span> <span class="toggle-icon">+</span>`;
+                header.innerHTML = `
+                    <span>${displayName} <small style="color:var(--accent-primary)">(${fwTag})</small></span> 
+                    <span style="display:flex; align-items:center; gap:8px">
+                        <span style="background: var(--bg-main); padding: 2px 8px; border-radius: 12px; font-size: 0.8em; border: 1px solid var(--border-color);">${nodesInRegion.length}</span>
+                        <span class="toggle-icon">+</span>
+                    </span>
+                `;
                 header.onclick = () => toggleRegion(header);
 
                 const nodesContainer = document.createElement('div');
