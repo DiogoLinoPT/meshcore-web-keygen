@@ -457,8 +457,10 @@
         function calculateIntersectionsAndRender() {
             let distGlobalExclusive = 0;
             let distGlobalShared = 0;
+            let distGlobalUnassigned = 0;
             let cimGlobalExclusive = 0;
             let cimGlobalShared = 0;
+            let cimGlobalUnassigned = 0;
             
             const distLabels = [];
             const distData = [];
@@ -492,9 +494,11 @@
                 
                 if (node.distCount === 1) distGlobalExclusive++;
                 else if (node.distCount > 1) distGlobalShared++;
+                else distGlobalUnassigned++;
                 
                 if (node.cimCount === 1) cimGlobalExclusive++;
                 else if (node.cimCount > 1) cimGlobalShared++;
+                else cimGlobalUnassigned++;
 
                 const marker = L.circleMarker([node.latitude, node.longitude], {
                     radius: 5,
@@ -681,10 +685,10 @@
                 new Chart(document.getElementById('distChart'), {
                     type: 'doughnut',
                     data: {
-                        labels: ['Exclusivos', 'Partilhados'],
+                        labels: ['Exclusivos', 'Partilhados', 'Sem Região'],
                         datasets: [{
-                            data: [distGlobalExclusive, distGlobalShared],
-                            backgroundColor: ['#2ecc71', '#f1c40f'],
+                            data: [distGlobalExclusive, distGlobalShared, distGlobalUnassigned],
+                            backgroundColor: ['#2ecc71', '#f1c40f', '#95a5a6'],
                             borderColor: '#1e2227',
                             borderWidth: 2
                         }]
@@ -713,10 +717,10 @@
                 new Chart(document.getElementById('cimChart'), {
                     type: 'doughnut',
                     data: {
-                        labels: ['Exclusivos', 'Partilhados'],
+                        labels: ['Exclusivos', 'Partilhados', 'Sem Região'],
                         datasets: [{
-                            data: [cimGlobalExclusive, cimGlobalShared],
-                            backgroundColor: ['#2ecc71', '#f1c40f'],
+                            data: [cimGlobalExclusive, cimGlobalShared, cimGlobalUnassigned],
+                            backgroundColor: ['#2ecc71', '#f1c40f', '#95a5a6'],
                             borderColor: '#1e2227',
                             borderWidth: 2
                         }]
