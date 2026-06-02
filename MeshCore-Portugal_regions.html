@@ -191,6 +191,57 @@
             font-size: 1.2em;
         }
 
+        .mobile-toggle {
+            display: none;
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2000;
+            background: var(--accent-primary);
+            color: #fff;
+            border: none;
+            border-radius: 30px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: background 0.3s, transform 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mobile-toggle:active {
+            transform: translateX(-50%) scale(0.95);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            #sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 1000;
+                transform: translateY(100%);
+                transition: transform 0.3s ease-in-out;
+            }
+            
+            body.show-sidebar #sidebar {
+                transform: translateY(0);
+            }
+            
+            .mobile-toggle {
+                display: flex !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -230,6 +281,8 @@
             </div>
         </div>
     </div>
+    
+    <button id="mobileToggleBtn" class="mobile-toggle" onclick="toggleMobileView()" style="display: none;">📋 Ver Listagem</button>
 
     <script>
         let map;
@@ -310,7 +363,26 @@
         }
 
         function focusNode(lat, lon) {
-            map.flyTo([lat, lon], 12);
+            map.setView([lat, lon], 12);
+            if (window.innerWidth <= 768 && document.body.classList.contains('show-sidebar')) {
+                toggleMobileView();
+            }
+        }
+
+        function toggleMobileView() {
+            const body = document.body;
+            const btn = document.getElementById('mobileToggleBtn');
+            body.classList.toggle('show-sidebar');
+            
+            if (body.classList.contains('show-sidebar')) {
+                btn.innerHTML = '🌍 Ver Mapa';
+                btn.style.background = 'var(--text-main)';
+                btn.style.color = 'var(--bg-card)';
+            } else {
+                btn.innerHTML = '📋 Ver Listagem';
+                btn.style.background = 'var(--accent-primary)';
+                btn.style.color = '#fff';
+            }
         }
 
         async function fetchRegions(distance = 20) {
