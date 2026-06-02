@@ -567,7 +567,8 @@
                     }
                 });
                 
-                const pctOfTotal = ((nodesInRegion.length / activeNodes.length) * 100).toFixed(1);
+                const mappedNodesCount = isCim ? (activeNodes.length - cimGlobalUnassigned) : (activeNodes.length - distGlobalUnassigned);
+                const pctOfTotal = mappedNodesCount > 0 ? ((nodesInRegion.length / mappedNodesCount) * 100).toFixed(1) : 0;
                 const excPct = nodesInRegion.length > 0 ? ((exclusiveCount / nodesInRegion.length) * 100).toFixed(0) : 0;
                 const shrPct = nodesInRegion.length > 0 ? ((sharedCount / nodesInRegion.length) * 100).toFixed(0) : 0;
                 
@@ -591,7 +592,7 @@
                     <div style="display:flex; flex-direction:column; gap: 4px;">
                         <div>${displayName} <small style="color:var(--accent-primary)">(${fwTag})</small> ${groupTypeBadge}</div>
                         <div style="font-size: 0.8em; color: var(--text-muted);">
-                            <b>${pctOfTotal}%</b> dos ${activeNodes.length} nós (${excPct}% exclusivos, ${shrPct}% partilhados)
+                            <b>${pctOfTotal}%</b> dos ${mappedNodesCount} nós abrangidos (${excPct}% exclusivos, ${shrPct}% partilhados)
                         </div>
                     </div>
                     <span style="display:flex; align-items:center; gap:8px">
