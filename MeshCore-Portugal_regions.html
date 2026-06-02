@@ -12,6 +12,9 @@
     <!-- Turf JS for Spatial calculations -->
     <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
 
+    <!-- Chart JS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         :root {
             --bg-main: #f8f9fa;
@@ -19,6 +22,7 @@
             --text-main: #2c3e50;
             --text-secondary: #7f8c8d;
             --accent-primary: #f05e16;
+            --accent-secondary: #3498db;
             --accent-hover: #d24e10;
             --border-color: #e0e0e0;
             --header-bg: #e2e8f0;
@@ -33,6 +37,7 @@
             --text-main: #f8f9fa;
             --text-secondary: #a0aec0;
             --accent-primary: #f05e16;
+            --accent-secondary: #3498db;
             --accent-hover: #ff7635;
             --border-color: #2d3748;
             --header-bg: #1a1a1c;
@@ -450,10 +455,22 @@
         }
 
         function calculateIntersectionsAndRender() {
+            let distGlobalExclusive = 0;
+            let distGlobalShared = 0;
+            let cimGlobalExclusive = 0;
+            let cimGlobalShared = 0;
+            
+            const distLabels = [];
+            const distData = [];
+            const cimLabels = [];
+            const cimData = [];
+
             // Draw markers on map
             activeNodes.forEach(node => {
                 const pt = turf.point([node.longitude, node.latitude]);
                 const nodeRegions = [];
+                node.distCount = 0;
+                node.cimCount = 0;
 
                 if (regionsGeoJSON && regionsGeoJSON.features) {
                     regionsGeoJSON.features.forEach(feature => {
@@ -466,9 +483,18 @@
                             if (regionMapping[mappingKey]) {
                                 regionMapping[mappingKey].push(node);
                             }
+                            
+                            if (isCim) node.cimCount++;
+                            else node.distCount++;
                         }
                     });
                 }
+                
+                if (node.distCount === 1) distGlobalExclusive++;
+                else if (node.distCount > 1) distGlobalShared++;
+                
+                if (node.cimCount === 1) cimGlobalExclusive++;
+                else if (node.cimCount > 1) cimGlobalShared++;
 
                 const marker = L.circleMarker([node.latitude, node.longitude], {
                     radius: 5,
@@ -516,6 +542,34 @@
                 if (isCim && !name.startsWith('CIM') && !name.startsWith('Área') && !name.startsWith('Região Autónoma') && !name.startsWith('Península') && !name.startsWith('Grande')) {
                     displayName = 'CIM ' + name;
                 }
+                
+                if (isCim) {
+                    cimLabels.push(displayName);
+                    cimData.push(nodesInRegion.length);
+                } else {
+                    distLabels.push(displayName);
+                    distData.push(nodesInRegion.length);
+                }
+
+                let exclusiveCount = 0;
+                let sharedCount = 0;
+                nodesInRegion.forEach(n => {
+                    if (isCim) {
+                        if (n.cimCount === 1) exclusiveCount++;
+                        else if (n.cimCount > 1) sharedCount++;
+                    } else {
+                        if (n.distCount === 1) exclusiveCount++;
+                        else if (n.distCount > 1) sharedCount++;
+                    }
+                });
+                
+                const pctOfTotal = ((nodesInRegion.length / activeNodes.length) * 100).toFixed(1);
+                const excPct = nodesInRegion.length > 0 ? ((exclusiveCount / nodesInRegion.length) * 100).toFixed(0) : 0;
+                const shrPct = nodesInRegion.length > 0 ? ((sharedCount / nodesInRegion.length) * 100).toFixed(0) : 0;
+                
+                const groupTypeBadge = isCim ? 
+                    `<span style="background: var(--accent-secondary); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em;">ANEPC</span>` : 
+                    `<span style="background: var(--accent-primary); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em;">Distrito</span>`;
 
                 // Sort nodes alphabetically by name
                 nodesInRegion.sort((a, b) => {
@@ -530,7 +584,12 @@
                 const header = document.createElement('div');
                 header.className = 'region-header';
                 header.innerHTML = `
-                    <span>${displayName} <small style="color:var(--accent-primary)">(${fwTag})</small></span> 
+                    <div style="display:flex; flex-direction:column; gap: 4px;">
+                        <div>${displayName} <small style="color:var(--accent-primary)">(${fwTag})</small> ${groupTypeBadge}</div>
+                        <div style="font-size: 0.8em; color: var(--text-muted);">
+                            <b>${pctOfTotal}%</b> dos ${activeNodes.length} nós (${excPct}% exclusivos, ${shrPct}% partilhados)
+                        </div>
+                    </div>
                     <span style="display:flex; align-items:center; gap:8px">
                         <span style="background: var(--bg-main); padding: 2px 8px; border-radius: 12px; font-size: 0.8em; border: 1px solid var(--border-color);">${nodesInRegion.length}</span>
                         <span class="toggle-icon">+</span>
@@ -548,7 +607,12 @@
                     // Only show first 8 chars of pubkey
                     const idSnippet = node.public_key.substring(0, 8); 
                     
-                    nodeEl.innerHTML = `<span>${name}</span> <span class="node-id">${idSnippet}</span>`;
+                    let isExclusive = isCim ? (node.cimCount === 1) : (node.distCount === 1);
+                    let badgeHtml = isExclusive ? 
+                        `<span style="color: #2ecc71; border: 1px solid #2ecc71; font-size: 0.65em; padding: 1px 4px; border-radius: 4px;">Exclusivo</span>` : 
+                        `<span style="color: #f1c40f; border: 1px solid #f1c40f; font-size: 0.65em; padding: 1px 4px; border-radius: 4px;">Partilhado</span>`;
+                    
+                    nodeEl.innerHTML = `<span style="display:flex; flex-direction:column; gap:2px;"><span style="display:flex; align-items:center; gap:8px;"><span>${name}</span> ${badgeHtml}</span><span class="node-id">${idSnippet}</span></span>`;
                     nodeEl.onclick = () => focusNode(node.latitude, node.longitude);
                     
                     nodesContainer.appendChild(nodeEl);
@@ -558,6 +622,124 @@
                 groupDiv.appendChild(nodesContainer);
                 listEl.appendChild(groupDiv);
             });
+            
+            // Render footer charts
+            const regionType = document.getElementById('typeSelect') ? document.getElementById('typeSelect').value : 'regions';
+            
+            const chartContainer = document.createElement('div');
+            chartContainer.style.padding = '20px 10px';
+            chartContainer.style.display = 'flex';
+            chartContainer.style.justifyContent = 'space-around';
+            chartContainer.style.flexWrap = 'wrap';
+            chartContainer.style.gap = '20px';
+            chartContainer.style.borderTop = '1px solid var(--border-color)';
+            chartContainer.style.marginTop = '20px';
+            
+            if (regionType === 'regions' || regionType === 'both') {
+                const div = document.createElement('div');
+                div.style.width = '180px';
+                div.innerHTML = `<h4 style="text-align:center; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Estatísticas - Distritos</h4><canvas id="distChart"></canvas>`;
+                chartContainer.appendChild(div);
+                
+                const divOcc = document.createElement('div');
+                divOcc.style.width = '180px';
+                divOcc.innerHTML = `<h4 style="text-align:center; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Ocupação - Distritos</h4><canvas id="distOccChart"></canvas>`;
+                chartContainer.appendChild(divOcc);
+            }
+            if (regionType === 'cims' || regionType === 'both') {
+                const div = document.createElement('div');
+                div.style.width = '180px';
+                div.innerHTML = `<h4 style="text-align:center; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Estatísticas - ANEPC</h4><canvas id="cimChart"></canvas>`;
+                chartContainer.appendChild(div);
+                
+                const divOcc = document.createElement('div');
+                divOcc.style.width = '180px';
+                divOcc.innerHTML = `<h4 style="text-align:center; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Ocupação - ANEPC</h4><canvas id="cimOccChart"></canvas>`;
+                chartContainer.appendChild(divOcc);
+            }
+            
+            listEl.appendChild(chartContainer);
+            
+            const chartOptions = { 
+                plugins: { legend: { position: 'bottom', labels: { color: '#e0e0e0', font: { size: 10 } } } },
+                cutout: '65%'
+            };
+            
+            const pieOptions = { 
+                plugins: { legend: { display: false } },
+                cutout: '0%'
+            };
+            
+            const colorPalette = ['#f05e16', '#3498db', '#9b59b6', '#2ecc71', '#f1c40f', '#e74c3c', '#1abc9c', '#34495e', '#e67e22', '#16a085', '#d35400', '#2980b9', '#8e44ad', '#27ae60', '#c0392b'];
+            function getColors(count) {
+                let c = [];
+                for(let i = 0; i < count; i++) c.push(colorPalette[i % colorPalette.length]);
+                return c;
+            }
+
+            if (regionType === 'regions' || regionType === 'both') {
+                new Chart(document.getElementById('distChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Exclusivos', 'Partilhados'],
+                        datasets: [{
+                            data: [distGlobalExclusive, distGlobalShared],
+                            backgroundColor: ['#2ecc71', '#f1c40f'],
+                            borderColor: '#1e2227',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: chartOptions
+                });
+                
+                const sortedDist = distLabels.map((l, i) => ({ l, v: distData[i] })).sort((a, b) => b.v - a.v);
+
+                new Chart(document.getElementById('distOccChart'), {
+                    type: 'pie',
+                    data: {
+                        labels: sortedDist.map(i => i.l),
+                        datasets: [{
+                            data: sortedDist.map(i => i.v),
+                            backgroundColor: getColors(distData.length),
+                            borderColor: '#1e2227',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: pieOptions
+                });
+            }
+            
+            if (regionType === 'cims' || regionType === 'both') {
+                new Chart(document.getElementById('cimChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Exclusivos', 'Partilhados'],
+                        datasets: [{
+                            data: [cimGlobalExclusive, cimGlobalShared],
+                            backgroundColor: ['#2ecc71', '#f1c40f'],
+                            borderColor: '#1e2227',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: chartOptions
+                });
+                
+                const sortedCim = cimLabels.map((l, i) => ({ l, v: cimData[i] })).sort((a, b) => b.v - a.v);
+
+                new Chart(document.getElementById('cimOccChart'), {
+                    type: 'pie',
+                    data: {
+                        labels: sortedCim.map(i => i.l),
+                        datasets: [{
+                            data: sortedCim.map(i => i.v),
+                            backgroundColor: getColors(cimData.length),
+                            borderColor: '#1e2227',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: pieOptions
+                });
+            }
         }
 
         window.onload = async () => {
