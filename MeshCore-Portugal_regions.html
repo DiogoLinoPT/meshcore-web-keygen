@@ -91,7 +91,7 @@
         .main-container {
             display: flex;
             flex: 1;
-            height: calc(100vh - 62px);
+            position: relative;
         }
 
         #map-container {
@@ -221,10 +221,11 @@
         @media (max-width: 768px) {
             .main-container {
                 flex-direction: column;
+                overflow: hidden;
             }
             
             #sidebar {
-                position: fixed;
+                position: absolute;
                 top: 0;
                 left: 0;
                 width: 100%;
@@ -241,13 +242,46 @@
             .mobile-toggle {
                 display: flex !important;
             }
+            
+            .title-separator {
+                display: none;
+            }
+            
+            .title-subtitle {
+                display: block;
+                font-size: 0.85em;
+                margin-top: 4px;
+            }
         }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h1>MeshCore Regiões (Portugal) - proposta do Diogo Lino</h1>
+    <div class="header" style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <div>
+                <h1 style="margin: 0; line-height: 1.2; font-size: 1.6em;">
+                    <span>MeshCore Portugal</span><span class="title-separator"> - </span><span class="title-subtitle">Proposta de Regiões / Scopes</span>
+                </h1>
+                <div style="font-size: 0.85em; color: var(--text-secondary); margin-top: 2px;">por Diogo Lino</div>
+            </div>
+            
+            <div class="global-controls" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <select id="typeSelect" style="padding: 6px; border-radius: 4px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); font-size: 0.9em;" onchange="changeBufferDistance()">
+                    <option value="regions" selected>Distritos</option>
+                    <option value="cims">Ent. Intermunicipais</option>
+                    <option value="both">Todos</option>
+                </select>
+                <select id="bufferSelect" style="padding: 6px; border-radius: 4px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); font-size: 0.9em;" onchange="changeBufferDistance()">
+                    <option value="20" selected>Expansão: +20km</option>
+                    <option value="35">Expansão: +35km</option>
+                    <option value="50">Expansão: +50km</option>
+                </select>
+            </div>
+        </div>
+        <div id="header-desc" style="font-size: 0.85em; color: var(--text-secondary); padding-top: 5px; border-top: 1px solid var(--border-color);">
+            Baseado em distritos expandidos (+20km). Os nós podem pertencer a múltiplas regiões sobrepostas.
+        </div>
     </div>
 
     <div class="main-container">
@@ -257,24 +291,7 @@
         </div>
         <div id="sidebar">
             <div class="sidebar-header">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h3>Nós por Região</h3>
-                    <div style="display: flex; gap: 10px;">
-                        <select id="typeSelect" style="padding: 4px; border-radius: 4px; background: var(--header-bg); color: var(--text-main); border: 1px solid var(--border-color);" onchange="changeBufferDistance()">
-                            <option value="regions" selected>Distritos</option>
-                            <option value="cims">Ent. Intermunicipais</option>
-                            <option value="both">Todos</option>
-                        </select>
-                        <select id="bufferSelect" style="padding: 4px; border-radius: 4px; background: var(--header-bg); color: var(--text-main); border: 1px solid var(--border-color);" onchange="changeBufferDistance()">
-                            <option value="20" selected>Expansão: +20km</option>
-                            <option value="35">Expansão: +35km</option>
-                            <option value="50">Expansão: +50km</option>
-                        </select>
-                    </div>
-                </div>
-                <p id="sidebar-desc" style="font-size: 0.85em; color: var(--text-secondary); margin-top: 5px;">
-                    Baseado em distritos expandidos (+20km). Os nós podem pertencer a múltiplas regiões sobrepostas.
-                </p>
+                <h3>Nós por Região</h3>
             </div>
             <div class="sidebar-content" id="region-list">
                 <!-- Javascript will populate this -->
@@ -509,10 +526,11 @@
         }
 
         async function changeBufferDistance() {
-            const distance = document.getElementById('bufferSelect').value;
+            const dist = document.getElementById('bufferSelect').value;
             const regionType = document.getElementById('typeSelect').value;
-            const typeLabel = regionType === 'regions' ? 'distritos' : (regionType === 'cims' ? 'entidades intermunicipais' : 'distritos e entidades intermunicipais');
-            document.getElementById('sidebar-desc').innerText = `Baseado em ${typeLabel} expandidas (+${distance}km). Os nós podem pertencer a múltiplas regiões sobrepostas.`;
+            const baseText = regionType === 'regions' ? 'Baseado em distritos' : (regionType === 'cims' ? 'Baseado em entidades intermunicipais' : 'Baseado em distritos e entidades intermunicipais');
+            const text = baseText + ` (+${dist}km). Os nós podem pertencer a múltiplas regiões sobrepostas.`;
+            document.getElementById('header-desc').innerText = text;
             document.getElementById('loader').style.display = 'flex';
             
             // Clear existing data
@@ -521,7 +539,7 @@
             regionMapping = {};
             markers = {};
             
-            await fetchRegions(distance);
+            await fetchRegions(dist);
             calculateIntersectionsAndRender();
             document.getElementById('loader').style.display = 'none';
         }
