@@ -447,6 +447,45 @@
             }
         }
 
+        async function fetchWithProxyFallback(url) {
+            // Localhost bypass: public proxies block localhost or hang.
+            // When developing locally, we fetch directly (requires disabling web security).
+            if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                console.info("Localhost bypass: fetching directly.");
+                const res = await fetch(url);
+                if (!res.ok) throw new Error("Direct fetch returned " + res.status);
+                return await res.json();
+            }
+
+            const proxies = [
+                `https://corsproxy.io/?${encodeURIComponent(url)}`,
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+            ];
+            
+            const fetchWithTimeout = async (resource, options = {}) => {
+                const { timeout = 4000 } = options;
+                const controller = new AbortController();
+                const id = setTimeout(() => controller.abort(), timeout);
+                const response = await fetch(resource, { ...options, signal: controller.signal });
+                clearTimeout(id);
+                return response;
+            };
+
+            for (let proxy of proxies) {
+                try {
+                    const res = await fetchWithTimeout(proxy, { timeout: 4000 });
+                    if (res.ok) return await res.json();
+                } catch (e) {
+                    console.warn("Proxy failed or timed out: " + proxy, e);
+                }
+            }
+            
+            console.warn("All proxies failed for " + url + ", trying direct fetch...");
+            const res = await fetchWithTimeout(url, { timeout: 4000 });
+            if (!res.ok) throw new Error("Direct fetch returned " + res.status);
+            return await res.json();
+        }
+
         async function fetchNodes() {
             // Reusing logic from MeshCore-Portugal_KeyGen.html (Last 7 days)
             const date = new Date();
@@ -457,13 +496,10 @@
                 const rawUrlLIS = `https://api.letsmesh.net/api/nodes?region=LIS&updated_since=${encodeURIComponent(updatedSinceStr)}`;
                 const rawUrlOPO = `https://api.letsmesh.net/api/nodes?region=OPO&updated_since=${encodeURIComponent(updatedSinceStr)}`;
 
-                const [resLIS, resOPO] = await Promise.all([
-                    fetch(`https://corsproxy.io/?${encodeURIComponent(rawUrlLIS)}`),
-                    fetch(`https://corsproxy.io/?${encodeURIComponent(rawUrlOPO)}`)
+                const [dataLIS, dataOPO] = await Promise.all([
+                    fetchWithProxyFallback(rawUrlLIS),
+                    fetchWithProxyFallback(rawUrlOPO)
                 ]);
-
-                const dataLIS = await resLIS.json();
-                const dataOPO = await resOPO.json();
 
                 let combinedNodes = [];
                 if (dataLIS && dataLIS.nodes) combinedNodes = combinedNodes.concat(dataLIS.nodes);
@@ -496,25 +532,30 @@
                 console.warn("Letsmesh API error, trying fallback...", err);
                 try {
                     const fallbackUrl = `https://www.meshcore.pt/api/nodes/list?days=7&excludeUsers=true&v=1`;
-                    const resFallback = await fetch(fallbackUrl);
-                    const fallbackNodes = await resFallback.json();
+                    const fallbackNodes = await fetchWithProxyFallback(fallbackUrl);
                     
                     const uniqueMap = new Map();
                     for (let n of fallbackNodes) {
-                        if (n && n.Id) {
-                            if (n.Role !== 2 && n.Role !== 3) continue;
+                        if (n && (n.Id || n.public_key || n._id)) {
+                            const role = n.Role !== undefined ? n.Role : (n.type !== undefined ? n.type : n.device_role);
+                            if (role !== 2 && role !== 3) continue;
                             
                             let lat = n.Lat || n.lat;
                             let lon = n.Lon || n.long || n.lon;
 
                             if (lat && lon) {
-                                uniqueMap.set(n.Id, {
-                                    public_key: n.Id,
+                                // Converter lat e long que a API de fallback envia como String "38,5217"
+                                if (typeof lat === 'string') lat = parseFloat(lat.replace(',', '.'));
+                                if (typeof lon === 'string') lon = parseFloat(lon.replace(',', '.'));
+
+                                const nodeId = n.Id || n.public_key || n._id;
+                                uniqueMap.set(nodeId, {
+                                    public_key: nodeId,
                                     long_name: n.LongName || n.name,
                                     short_name: n.ShortName || n.name,
                                     latitude: lat,
                                     longitude: lon,
-                                    device_role: n.Role
+                                    device_role: role
                                 });
                             }
                         }

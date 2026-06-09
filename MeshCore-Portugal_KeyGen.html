@@ -737,18 +737,26 @@
             <!-- STEP 1: Map / Location -->
             <div id="step1" class="wizard-step active">
                 <div class="mobile-opt">
-                    <input type="checkbox" id="isMobileDevice" onchange="toggleStep1Mode()">
+                    <input type="checkbox" id="isMobileDevice" onchange="toggleStep1Mode('isMobileDevice')">
                     <label for="isMobileDevice">
-                        <div>Repetidor móvel (terá prefixo 0100)
-                            <span class="help-tooltip">Escolhe esta opção se não vais ter o repetidor numa posição fixa
+                        <div>Repetidor Móvel (terá prefixo 0100)
+                            <span class="help-tooltip">Escolha esta opção se não vai ter o repetidor numa posição fixa
                                 (telhado, torre, etc.), e se vai assumir diferentes posições (no carro, bolso,
                                 etc.).</span>
                         </div>
                     </label>
                 </div>
+                <div class="mobile-opt" style="margin-top: 10px;">
+                    <input type="checkbox" id="isTempDevice" onchange="toggleStep1Mode('isTempDevice')">
+                    <label for="isTempDevice">
+                        <div>Repetidor Temporário (terá prefixo 0101)
+                            <span class="help-tooltip">Escolha esta opção se o repetidor for utilizado para demonstrações e experiências de curta duração.</span>
+                        </div>
+                    </label>
+                </div>
 
                 <div id="mapWrapper">
-                    <h3 style="margin-bottom: 12px;">1. Seleciona a Localização Planeada</h3>
+                    <h3 style="margin-bottom: 12px;">1. Selecione a Localização Planeada</h3>
                     <div id="map"></div>
                     <div class="coords-group">
                         <div>
@@ -972,7 +980,7 @@
     <div class="footer">
         <div style="margin-bottom: 5px;">💻 <a href="https://github.com/DiogoLinoPT/meshcore-web-keygen" target="_blank"
                 rel="noopener" style="text-decoration: underline;">Source code at Github</a> <span
-                style="opacity: 0.7; font-size: 0.9em; margin-left: 5px;">v1.2.1</span></div>
+                style="opacity: 0.7; font-size: 0.9em; margin-left: 5px;">v1.3.0</span></div>
         <div style="font-size: 0.9em; opacity: 0.8;">Base engine by <a
                 href="https://github.com/agessaman/meshcore-web-keygen" target="_blank" rel="noopener">agessaman</a>.
             Tailored for MeshCore Portugal.</div>
@@ -1057,9 +1065,17 @@
         setTimeout(initMap, 100);
 
         // --- WIZARD LOGIC ---
-        function toggleStep1Mode() {
-            const isMobile = document.getElementById('isMobileDevice').checked;
-            if (isMobile) {
+        function toggleStep1Mode(changedId) {
+            const isMobile = document.getElementById('isMobileDevice');
+            const isTemp = document.getElementById('isTempDevice');
+            
+            if (changedId === 'isMobileDevice' && isMobile.checked) {
+                if (isTemp) isTemp.checked = false;
+            } else if (changedId === 'isTempDevice' && isTemp.checked) {
+                if (isMobile) isMobile.checked = false;
+            }
+            
+            if (isMobile.checked || (isTemp && isTemp.checked)) {
                 document.getElementById('mapWrapper').style.display = 'none';
                 document.getElementById('btnNext1').style.display = 'none';
                 document.getElementById('btnNext1Mobile').style.display = 'block';
@@ -1134,8 +1150,9 @@
 
         function cancelPreGen() {
             const isMobileDevice = document.getElementById('isMobileDevice').checked;
+            const isTempDevice = document.getElementById('isTempDevice')?.checked;
             const use2Byte = document.getElementById('use2BytePrefix').checked;
-            if (isMobileDevice) {
+            if (isMobileDevice || isTempDevice) {
                 switchStep('step1');
             } else if (use2Byte) {
                 switchStep('step2b');
@@ -1146,13 +1163,14 @@
 
         function goBackFromResults() {
             const isMobileDevice = document.getElementById('isMobileDevice').checked;
+            const isTempDevice = document.getElementById('isTempDevice')?.checked;
             const use2Byte = document.getElementById('use2BytePrefix').checked;
             
             // Repor visibilidade para que na próxima geração o ecrã venha no formulário inicial
             document.getElementById('postGenResults').style.display = 'none';
             document.getElementById('preGenForm').style.display = 'block';
 
-            if (isMobileDevice) {
+            if (isMobileDevice || isTempDevice) {
                 switchStep('step1');
             } else if (use2Byte) {
                 switchStep('step2b');
@@ -1162,12 +1180,23 @@
         }
 
         function skipToGeneration() {
+            const isMobile = document.getElementById('isMobileDevice').checked;
+            const isTemp = document.getElementById('isTempDevice')?.checked;
+            
+            let prefix = '0100';
+            let normDesc = "O prefixo <b>0100</b> é a norma para repetidores móveis em Portugal, pelo que existirão dezenas de nós com este mesmo prefixo.";
+            
+            if (isTemp) {
+                prefix = '0101';
+                normDesc = "O prefixo <b>0101</b> é a norma para repetidores temporários (demonstrações e experiências rápidas).";
+            }
+
             document.getElementById('stepCustomizeTitle').innerText = "2. Personalizar Chave (Opcional)";
             document.getElementById('stepResultsTitle').innerText = "3. Resultados da Geração";
-            document.getElementById('basePrefixDisplay').innerText = '0100';
+            document.getElementById('basePrefixDisplay').innerText = prefix;
             document.getElementById('chosenPrefix').value = '';
             document.getElementById('chosenPrefix').maxLength = 4;
-            document.getElementById('preGenDesc').innerHTML = "O prefixo <b>0100</b> é a norma para repetidores móveis em Portugal, pelo que existirão dezenas de nós com este mesmo prefixo.<br><br>Pode manter o prefixo exato sugerido ou acrescentar os seus próprios caracteres adicionais no fim se desejar criar uma <em>Vanity Key</em> mais detalhada.";
+            document.getElementById('preGenDesc').innerHTML = normDesc + "<br><br>Pode manter o prefixo exato sugerido ou acrescentar os seus próprios caracteres adicionais no fim se desejar criar uma <em>Vanity Key</em> mais detalhada.";
             document.getElementById('perfNote').innerHTML = "<b>Nota de Performance:</b> Quanto mais caracteres adicionar, exponencialmente mais tempo de CPU o seu computador necessitará para a descobrir. Tem um limite máximo de adição de <b>+4 caracteres</b> (perfazendo um total máximo de 8 caracteres, ou seja, 4 bytes).";
             document.getElementById('preGenForm').style.display = 'block';
             document.getElementById('postGenResults').style.display = 'none';
@@ -1193,7 +1222,7 @@
         // --- API & DATA LOGIC ---
         let globalNodes = [];
         let selectedFirstByte = '';
-        const RESERVED_PREFIXES = ['00', '01', 'FF'];
+        const RESERVED_PREFIXES = ['00', '01', '02', 'FF'];
 
         // Slider Steps Enforcer
         const allowedSteps = [100, 250, 400, 600, 1000];
@@ -1212,6 +1241,45 @@
             return date.toISOString();
         }
 
+        async function fetchWithProxyFallback(url) {
+            // Localhost bypass: public proxies block localhost or hang.
+            // When developing locally, we fetch directly (requires disabling web security).
+            if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                console.info("Localhost bypass: fetching directly.");
+                const res = await fetch(url);
+                if (!res.ok) throw new Error("Direct fetch returned " + res.status);
+                return await res.json();
+            }
+
+            const proxies = [
+                `https://corsproxy.io/?${encodeURIComponent(url)}`,
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+            ];
+            
+            const fetchWithTimeout = async (resource, options = {}) => {
+                const { timeout = 4000 } = options;
+                const controller = new AbortController();
+                const id = setTimeout(() => controller.abort(), timeout);
+                const response = await fetch(resource, { ...options, signal: controller.signal });
+                clearTimeout(id);
+                return response;
+            };
+
+            for (let proxy of proxies) {
+                try {
+                    const res = await fetchWithTimeout(proxy, { timeout: 4000 });
+                    if (res.ok) return await res.json();
+                } catch (e) {
+                    console.warn("Proxy failed or timed out: " + proxy, e);
+                }
+            }
+            
+            console.warn("All proxies failed for " + url + ", trying direct fetch...");
+            const res = await fetchWithTimeout(url, { timeout: 4000 });
+            if (!res.ok) throw new Error("Direct fetch returned " + res.status);
+            return await res.json();
+        }
+
         async function refreshApiData() {
             const timeVal = document.getElementById('timeFilter').value;
             const updatedSinceStr = getISODateForTimeFilter(timeVal);
@@ -1224,14 +1292,10 @@
                 const rawUrlLIS = `https://api.letsmesh.net/api/nodes?region=LIS&updated_since=${encodeURIComponent(updatedSinceStr)}`;
                 const rawUrlOPO = `https://api.letsmesh.net/api/nodes?region=OPO&updated_since=${encodeURIComponent(updatedSinceStr)}`;
 
-                // Fetch both LIS and OPO in parallel using a public CORS proxy
-                const [resLIS, resOPO] = await Promise.all([
-                    fetch(`https://corsproxy.io/?${encodeURIComponent(rawUrlLIS)}`),
-                    fetch(`https://corsproxy.io/?${encodeURIComponent(rawUrlOPO)}`)
+                const [dataLIS, dataOPO] = await Promise.all([
+                    fetchWithProxyFallback(rawUrlLIS),
+                    fetchWithProxyFallback(rawUrlOPO)
                 ]);
-
-                const dataLIS = await resLIS.json();
-                const dataOPO = await resOPO.json();
 
                 // Merge node arrays
                 let combinedNodes = [];
@@ -1242,14 +1306,21 @@
                 const uniqueMap = new Map();
                 for (let n of combinedNodes) {
                     if (n && n.public_key) {
-                        // Exclude nodes that listen to foreign regions
-                        if (n.regions && Array.isArray(n.regions)) {
-                            const hasForeignRegion = n.regions.some(r => r !== 'LIS' && r !== 'OPO');
-                            if (hasForeignRegion) continue;
-                        }
-
                         // Exclude nodes that are not infrastructure (only keep Repeaters = 2 or Room Servers = 3)
                         if (n.device_role !== 2 && n.device_role !== 3) continue;
+                        
+                        let lat = null, lon = null;
+                        if (n.position && n.position.latitude) {
+                            lat = n.position.latitude; lon = n.position.longitude;
+                        } else if (n.location && n.location.latitude) {
+                            lat = n.location.latitude; lon = n.location.longitude;
+                        } else if (n.lat) {
+                            lat = n.lat; lon = n.long || n.lon;
+                        }
+
+                        if (lat && lon) {
+                            n.location = { latitude: lat, longitude: lon };
+                        }
 
                         uniqueMap.set(n.public_key, n);
                     }
@@ -1272,37 +1343,30 @@
                     else if (timeVal === '1m') days = 30;
                     
                     const fallbackUrl = `https://www.meshcore.pt/api/nodes/list?days=${days}&excludeUsers=true&v=1`;
-                    const resFallback = await fetch(fallbackUrl);
-                    const dataFallback = await resFallback.json();
-                    
-                    let fallbackNodes = Array.isArray(dataFallback) ? dataFallback : [];
+                    const fallbackNodes = await fetchWithProxyFallback(fallbackUrl);
                     
                     const uniqueMap = new Map();
                     for (let n of fallbackNodes) {
-                        if (n && n.public_key) {
-                            // Exclude nodes that listen to foreign regions
-                            if (n.regions && Array.isArray(n.regions)) {
-                                const hasForeignRegion = n.regions.some(r => r !== 'LIS' && r !== 'OPO');
-                                if (hasForeignRegion) continue;
-                            }
+                        if (n && (n.Id || n.public_key || n._id)) {
+                            // Extract ID uniformly
+                            const nodeId = n.Id || n.public_key || n._id;
                             
-                            let mappedLoc = null;
-                            if (n.lat !== undefined && n.lat !== null && n.lat !== 0) {
-                                mappedLoc = { latitude: n.lat, longitude: n.long };
-                            } else if (n.location && typeof n.location.latitude === 'number' && n.location.latitude !== 0) {
-                                mappedLoc = n.location;
-                            } else if (n.decoded_payload && typeof n.decoded_payload.lat === 'number' && n.decoded_payload.lat !== 0) {
-                                mappedLoc = { latitude: n.decoded_payload.lat, longitude: n.decoded_payload.lon };
-                            }
+                            // Filter by role (infrastructure only)
+                            const role = n.Role !== undefined ? n.Role : (n.type !== undefined ? n.type : n.device_role);
+                            if (role !== 2 && role !== 3) continue;
                             
-                            uniqueMap.set(n.public_key, {
-                                public_key: n.public_key,
-                                name: n.name,
-                                location: mappedLoc,
-                                decoded_payload: n.decoded_payload,
-                                last_seen: n.last_seen,
-                                timestamp: n.timestamp
-                            });
+                            let lat = n.Lat || n.lat || (n.location && n.location.latitude) || (n.decoded_payload && n.decoded_payload.lat);
+                            let lon = n.Lon || n.long || n.lon || (n.location && n.location.longitude) || (n.decoded_payload && n.decoded_payload.lon);
+
+                            if (lat && lon) {
+                                uniqueMap.set(nodeId, {
+                                    public_key: nodeId,
+                                    name: n.LongName || n.ShortName || n.name,
+                                    location: { latitude: lat, longitude: lon },
+                                    last_seen: n.LastSeen || n.last_seen,
+                                    timestamp: n.timestamp
+                                });
+                            }
                         }
                     }
 
