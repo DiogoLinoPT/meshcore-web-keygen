@@ -268,16 +268,30 @@
             </div>
             
             <div class="global-controls" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <button onclick="document.getElementById('helpModal').style.display='flex'" style="padding: 6px 12px; border-radius: 4px; background: var(--accent-secondary); color: white; border: none; font-size: 0.9em; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                    <span style="font-weight: bold; background: rgba(255,255,255,0.2); border-radius: 50%; width: 18px; height: 18px; display: inline-flex; justify-content: center; align-items: center;">?</span> Ajuda
+                </button>
                 <select id="typeSelect" style="padding: 6px; border-radius: 4px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); font-size: 0.9em;" onchange="changeBufferDistance()">
                     <option value="regions" selected>Distritos</option>
                     <option value="cims">Ent. Intermunicipais</option>
                     <option value="both">Todos</option>
                 </select>
-                <select id="bufferSelect" style="padding: 6px; border-radius: 4px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); font-size: 0.9em;" onchange="changeBufferDistance()">
-                    <option value="20" selected>Expansão: +20km</option>
-                    <option value="35">Expansão: +35km</option>
-                    <option value="50">Expansão: +50km</option>
-                </select>
+                <div style="display: flex; align-items: center; gap: 8px; background: var(--bg-card); padding: 4px 12px; border-radius: 4px; border: 1px solid var(--border-color);">
+                    <span id="bufferLabel" style="font-size: 0.9em; min-width: 115px; color: var(--text-main);">Expansão: +20km</span>
+                    <div style="display: flex; flex-direction: column; width: 120px; align-items: center;">
+                        <input type="range" id="bufferSlider" min="20" max="50" step="15" value="20" list="bufferTicks" style="cursor: pointer; width: 100%; margin: 0;" onchange="changeBufferDistance()" oninput="document.getElementById('bufferLabel').innerText = 'Expansão: +' + this.value + 'km'">
+                        <datalist id="bufferTicks">
+                            <option value="20"></option>
+                            <option value="35"></option>
+                            <option value="50"></option>
+                        </datalist>
+                        <div style="display: flex; justify-content: space-between; width: 100%; font-size: 0.7em; color: var(--text-secondary); padding-top: 2px; box-sizing: border-box; padding-left: 2px; padding-right: 2px;">
+                            <span>20</span>
+                            <span>35</span>
+                            <span>50</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         <div id="header-desc" style="font-size: 0.85em; color: var(--text-secondary); padding-top: 5px; border-top: 1px solid var(--border-color);">
@@ -301,6 +315,26 @@
     </div>
     
     <button id="mobileToggleBtn" class="mobile-toggle" onclick="toggleMobileView()" style="display: none;">📋 Ver Listagem</button>
+
+    <!-- Help Modal Overlay -->
+    <div id="helpModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 3000; justify-content: center; align-items: center; padding: 20px;">
+        <div style="background: var(--bg-card); color: var(--text-main); padding: 30px; border-radius: 8px; max-width: 700px; width: 100%; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); line-height: 1.6;">
+            <button onclick="document.getElementById('helpModal').style.display='none'" style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.5em; color: var(--text-secondary); cursor: pointer;">&times;</button>
+            <h2 style="margin-bottom: 20px; color: var(--accent-primary);">Sobre as Regiões e Organização Territorial</h2>
+            
+            <p style="margin-bottom: 15px;">
+                Esta proposta contempla 2 dimensões geográficas, em que uma é a divisão administrativa, pelos <a href="https://pt.wikipedia.org/wiki/Distritos_de_Portugal" target="_blank" style="color: var(--accent-secondary); text-decoration: none;">distritos de Portugal</a>, e a outra é as estruturas regionais (<a href="https://anmp.pt/file-viewer/?pstid=42396" target="_blank" style="color: var(--accent-secondary); text-decoration: none;">comandos regionais</a>) da Autoridade Nacional de Emergência e Proteção Civil (ANEPC), que se baseia nas <a href="https://pt.wikipedia.org/wiki/Entidades_intermunicipais_de_Portugal" target="_blank" style="color: var(--accent-secondary); text-decoration: none;">entidades intermunicipais</a>, tanto as áreas metropolitanas como as comunidades intermunicipais, que têm como base as NUTS.
+            </p>
+
+            <p style="margin-bottom: 15px;">
+                A <a href="https://www.pordata.pt/O+que+sao+NUTS" target="_blank" style="color: var(--accent-secondary); text-decoration: none;">Nomenclatura das Unidades Territoriais para Fins Estatísticos (NUTS)</a> é um sistema hierárquico de divisão do território em regiões, criado pelo Eurostat para fins estatísticos e de formulação de políticas regionais. Em Portugal, as NUTS dividem-se em três níveis (I, II e III), sendo as NUTS III (correspondentes às entidades intermunicipais) frequentemente utilizadas para a organização das comunicações e estruturas de socorro e proteção civil.
+            </p>
+
+            <p style="margin-bottom: 0;">
+                A perspetiva central desta abordagem é permitir que os repetidores suportem uma dupla divisão do território, fornecendo dessa forma as ferramentas à rede. Cabe depois ao utilizador, através das suas aplicações (companions), escolher o <i>scope</i> que melhor entender de acordo com as suas necessidades. O mais importante é que a infraestrutura garanta estas ferramentas de base, tendo em conta que a coexistência de ambos os sistemas em simultâneo não interfere de forma alguma com o normal funcionamento da rede, e fornece muito mais opções e flexibilidade aos utilizadores.
+            </p>
+        </div>
+    </div>
 
     <script>
         let map;
@@ -568,7 +602,7 @@
         }
 
         async function changeBufferDistance() {
-            const dist = document.getElementById('bufferSelect').value;
+            const dist = document.getElementById('bufferSlider').value;
             const regionType = document.getElementById('typeSelect').value;
             const baseText = regionType === 'regions' ? 'Baseado em distritos' : (regionType === 'cims' ? 'Baseado em entidades intermunicipais' : 'Baseado em distritos e entidades intermunicipais');
             const text = baseText + ` (+${dist}km). Os nós podem pertencer a múltiplas regiões sobrepostas.`;
