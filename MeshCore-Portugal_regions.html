@@ -332,13 +332,17 @@
                 <div style="display: flex; align-items: center; gap: 8px; background: var(--bg-card); padding: 4px 12px; border-radius: 4px; border: 1px solid var(--border-color);">
                     <span id="bufferLabel" style="font-size: 0.9em; min-width: 115px; color: var(--text-main);">Expansão: +20km</span>
                     <div style="display: flex; flex-direction: column; width: 120px; align-items: center;">
-                        <input type="range" id="bufferSlider" min="20" max="50" step="15" value="20" list="bufferTicks" style="cursor: pointer; width: 100%; margin: 0;" onchange="changeBufferDistance()" oninput="document.getElementById('bufferLabel').innerText = 'Expansão: +' + this.value + 'km'">
+                        <input type="range" id="bufferSlider" min="0" max="4" step="1" value="2" list="bufferTicks" style="cursor: pointer; width: 100%; margin: 0;" onchange="changeBufferDistance()" oninput="document.getElementById('bufferLabel').innerText = 'Expansão: +' + [5,10,20,35,50][this.value] + 'km'">
                         <datalist id="bufferTicks">
-                            <option value="20"></option>
-                            <option value="35"></option>
-                            <option value="50"></option>
+                            <option value="0"></option>
+                            <option value="1"></option>
+                            <option value="2"></option>
+                            <option value="3"></option>
+                            <option value="4"></option>
                         </datalist>
                         <div style="display: flex; justify-content: space-between; width: 100%; font-size: 0.7em; color: var(--text-secondary); padding-top: 2px; box-sizing: border-box; padding-left: 2px; padding-right: 2px;">
+                            <span>5</span>
+                            <span>10</span>
                             <span>20</span>
                             <span>35</span>
                             <span>50</span>
@@ -655,7 +659,8 @@
         }
 
         async function changeBufferDistance() {
-            const dist = document.getElementById('bufferSlider').value;
+            const index = document.getElementById('bufferSlider').value;
+            const dist = [5, 10, 20, 35, 50][index];
             const regionType = document.getElementById('typeSelect').value;
             const baseText = regionType === 'regions' ? 'Baseado em distritos' : (regionType === 'cims' ? 'Baseado em entidades intermunicipais' : 'Baseado em distritos e entidades intermunicipais');
             const text = baseText + ` (+${dist}km). Os nós podem pertencer a múltiplas regiões sobrepostas.`;
