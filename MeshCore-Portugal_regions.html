@@ -325,9 +325,12 @@
                     <span style="font-weight: bold; background: rgba(255,255,255,0.2); border-radius: 50%; width: 18px; height: 18px; display: inline-flex; justify-content: center; align-items: center;">?</span> Ajuda
                 </button>
                 <select id="typeSelect" style="padding: 6px; border-radius: 4px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); font-size: 0.9em;" onchange="changeBufferDistance()">
-                    <option value="regions" selected>Distritos</option>
-                    <option value="cims">Ent. Intermunicipais</option>
-                    <option value="both">Todos</option>
+                    <option value="nuts2_regions">ANEPC (NUTS II) + Distritos</option>
+                    <option value="nuts2">ANEPC (NUTS II)</option>
+                    <option value="regions">Distritos</option>
+                    <option value="both">ANEPC (CIM/AM) + Distritos</option>
+                    <option value="cims">ANEPC (CIM/AM)</option>
+                    <option value="all" selected>ANEPC (NUTS II) + ANEPC (CIM/AM) + Distritos</option>
                 </select>
                 <div style="display: flex; align-items: center; gap: 8px; background: var(--bg-card); padding: 4px 12px; border-radius: 4px; border: 1px solid var(--border-color);">
                     <span id="bufferLabel" style="font-size: 0.9em; min-width: 115px; color: var(--text-main);">Expansão: +20km</span>
@@ -380,15 +383,15 @@
             <h2 style="margin-bottom: 20px; color: var(--accent-primary);">Sobre as Regiões e Organização Territorial</h2>
             
             <p style="margin-bottom: 15px;">
-                Esta proposta contempla 2 dimensões geográficas, em que uma é a divisão administrativa, pelos <a href="https://pt.wikipedia.org/wiki/Distritos_de_Portugal" target="_blank" style="color: var(--accent-secondary); text-decoration: none;">distritos de Portugal</a>, e a outra é as estruturas regionais (<a href="https://anmp.pt/file-viewer/?pstid=42396" target="_blank" style="color: var(--accent-secondary); text-decoration: none;">comandos regionais</a>) da Autoridade Nacional de Emergência e Proteção Civil (ANEPC), que se baseia nas <a href="https://pt.wikipedia.org/wiki/Entidades_intermunicipais_de_Portugal" target="_blank" style="color: var(--accent-secondary); text-decoration: none;">entidades intermunicipais</a>, tanto as áreas metropolitanas como as comunidades intermunicipais, que têm como base as NUTS.
+                Esta proposta contempla múltiplas dimensões geográficas. Por um lado, temos a divisão administrativa baseada nos <a href="https://pt.wikipedia.org/wiki/Distritos_de_Portugal" target="_blank" style="color: var(--accent-secondary); text-decoration: none;">Distritos de Portugal</a>. Por outro lado, acompanhamos a estrutura territorial da Autoridade Nacional de Emergência e Proteção Civil (ANEPC), que se divide em dois níveis de abrangência suportados pelas NUTS.
             </p>
 
             <p style="margin-bottom: 15px;">
-                A <a href="https://www.pordata.pt/O+que+sao+NUTS" target="_blank" style="color: var(--accent-secondary); text-decoration: none;">Nomenclatura das Unidades Territoriais para Fins Estatísticos (NUTS)</a> é um sistema hierárquico de divisão do território em regiões, criado pelo Eurostat para fins estatísticos e de formulação de políticas regionais. Em Portugal, as NUTS dividem-se em três níveis (I, II e III), sendo as NUTS III (correspondentes às entidades intermunicipais) frequentemente utilizadas para a organização das comunicações e estruturas de socorro e proteção civil.
+                A <a href="https://www.pordata.pt/O+que+sao+NUTS" target="_blank" style="color: var(--accent-secondary); text-decoration: none;">Nomenclatura das Unidades Territoriais para Fins Estatísticos (NUTS)</a> é um sistema hierárquico europeu de divisão do território. Em Portugal, a ANEPC baseia-se nestas unidades para organizar as suas estruturas de socorro: os <b><a href="https://anmp.pt/file-viewer/?pstid=42396" target="_blank" style="color: var(--accent-secondary); text-decoration: none;">Comandos Regionais</a> (ANEPC NUTS II)</b> coincidem com grandes áreas (ex: Norte, Centro, Alentejo), enquanto os <b>Comandos Sub-Regionais (ANEPC CIM/AM)</b> coincidem com as NUTS III, englobando as <a href="https://pt.wikipedia.org/wiki/Entidades_intermunicipais_de_Portugal" target="_blank" style="color: var(--accent-secondary); text-decoration: none;">Comunidades Intermunicipais e as Áreas Metropolitanas</a>.
             </p>
 
             <p style="margin-bottom: 0;">
-                A perspetiva central desta abordagem é permitir que os repetidores suportem uma dupla divisão do território, fornecendo dessa forma as ferramentas à rede. Cabe depois ao utilizador, através das suas aplicações (companions), escolher o <i>scope</i> que melhor entender de acordo com as suas necessidades. O mais importante é que a infraestrutura garanta estas ferramentas de base, tendo em conta que a coexistência de ambos os sistemas em simultâneo não interfere de forma alguma com o normal funcionamento da rede, e fornece muito mais opções e flexibilidade aos utilizadores.
+                A perspetiva central desta abordagem multifacetada é dotar a infraestrutura da rede de repetidores com flexibilidade máxima. Cabe ao utilizador, através da interface, combinar ou focar-se na organização territorial (Distritos, NUTS II ou CIM/AM) que melhor servir as suas comunicações. O mais importante é que os repetidores forneçam as "ferramentas base" para suportar esta coexistência sem interferir no normal funcionamento da malha.
             </p>
         </div>
     </div>
@@ -405,17 +408,25 @@
         // Cores para os polígonos
         const regionColors = ['#f05e16', '#3498db', '#9b59b6', '#2ecc71', '#f1c40f', '#e74c3c', '#1abc9c'];
 
-        function formatFirmwareRegion(name, isCim) {
+        function formatFirmwareRegion(name, isCim, isNuts2) {
             let clean = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ /g, '-');
             if (isCim) {
                 if (clean === 'area-metropolitana-de-lisboa' || clean === 'area-metropolitana-do-porto') {
-                    return '#' + clean.replace('area-metropolitana-de-', 'am-').replace('area-metropolitana-do-', 'am-');
+                    clean = clean.replace('area-metropolitana-de-', 'anepc-').replace('area-metropolitana-do-', 'anepc-');
                 } else if (clean === 'regiao-autonoma-dos-acores') {
                     return '#ra-acores';
                 } else if (clean === 'regiao-autonoma-da-madeira') {
                     return '#ra-madeira';
                 } else {
-                    return '#cim-' + clean;
+                    clean = 'anepc-' + clean;
+                }
+            } else if (isNuts2) {
+                if (clean === 'regiao-autonoma-dos-acores') {
+                    return '#ra-acores';
+                } else if (clean === 'regiao-autonoma-da-madeira') {
+                    return '#ra-madeira';
+                } else {
+                    clean = 'anepc-' + clean;
                 }
             } else {
                 if (clean === 'regiao-autonoma-dos-acores') {
@@ -425,6 +436,11 @@
                 }
                 return '#' + clean;
             }
+
+            if (clean === 'anepc-terras-de-tras-os-montes') clean = 'anepc-terras-tras-os-montes';
+            if (clean === 'anepc-beiras-e-serra-da-estrela') clean = 'anepc-beiras-e-serra-estrela';
+
+            return '#' + clean;
         }
 
         function initMap() {
@@ -447,7 +463,7 @@
                 if (regionsGeoJSON && regionsGeoJSON.features) {
                     regionsGeoJSON.features.forEach(feature => {
                         if (turf.booleanPointInPolygon(pt, feature)) {
-                            clickedRegions.push(formatFirmwareRegion(feature.properties.name, feature.properties.is_cim));
+                            clickedRegions.push(formatFirmwareRegion(feature.properties.name, feature.properties.is_cim, feature.properties.is_nuts2));
                         }
                     });
                 }
@@ -499,13 +515,18 @@
                 const regionType = document.getElementById('typeSelect') ? document.getElementById('typeSelect').value : 'regions';
                 let features = [];
 
-                if (regionType === 'both' || regionType === 'regions') {
+                if (regionType === 'both' || regionType === 'regions' || regionType === 'nuts2_regions' || regionType === 'all') {
                     const res = await fetch('data/pt_regions_' + distance + 'km.geojson');
                     const json = await res.json();
                     features = features.concat(json.features);
                 }
-                if (regionType === 'both' || regionType === 'cims') {
+                if (regionType === 'both' || regionType === 'cims' || regionType === 'all') {
                     const res = await fetch('data/pt_cims_' + distance + 'km.geojson');
+                    const json = await res.json();
+                    features = features.concat(json.features);
+                }
+                if (regionType === 'nuts2' || regionType === 'nuts2_regions' || regionType === 'all') {
+                    const res = await fetch('data/pt_nuts2_' + distance + 'km.geojson');
                     const json = await res.json();
                     features = features.concat(json.features);
                 }
@@ -528,7 +549,8 @@
                     },
                     onEachFeature: function (feature, layer) {
                         let isCim = feature.properties.is_cim === true;
-                        let mappingKey = feature.properties.name + (isCim ? '|cim' : '|dist');
+                        let isNuts2 = feature.properties.is_nuts2 === true;
+                        let mappingKey = feature.properties.name + (isCim ? '|cim' : (isNuts2 ? '|nuts2' : '|dist'));
                         regionMapping[mappingKey] = []; // Initialize empty array for this region
                     }
                 }).addTo(map);
@@ -539,20 +561,6 @@
         }
 
         async function fetchWithProxyFallback(url) {
-            // Localhost bypass: public proxies block localhost or hang.
-            // When developing locally, we fetch directly (requires disabling web security).
-            if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-                console.info("Localhost bypass: fetching directly.");
-                const res = await fetch(url);
-                if (!res.ok) throw new Error("Direct fetch returned " + res.status);
-                return await res.json();
-            }
-
-            const proxies = [
-                `https://corsproxy.io/?${encodeURIComponent(url)}`,
-                `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
-            ];
-            
             const fetchWithTimeout = async (resource, options = {}) => {
                 const { timeout = 4000 } = options;
                 const controller = new AbortController();
@@ -562,6 +570,20 @@
                 return response;
             };
 
+            // First, try direct fetch
+            try {
+                const res = await fetchWithTimeout(url, { timeout: 4000 });
+                if (res.ok) return await res.json();
+            } catch (e) {
+                console.warn("Direct fetch failed or blocked by CORS: " + url);
+            }
+
+            // Fallback to proxies
+            const proxies = [
+                `https://corsproxy.io/?${encodeURIComponent(url)}`,
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+            ];
+            
             for (let proxy of proxies) {
                 try {
                     const res = await fetchWithTimeout(proxy, { timeout: 4000 });
@@ -570,91 +592,43 @@
                     console.warn("Proxy failed or timed out: " + proxy, e);
                 }
             }
-            
-            console.warn("All proxies failed for " + url + ", trying direct fetch...");
-            const res = await fetchWithTimeout(url, { timeout: 4000 });
-            if (!res.ok) throw new Error("Direct fetch returned " + res.status);
-            return await res.json();
+            throw new Error("All fetch attempts (direct and proxy) failed for " + url);
         }
 
         async function fetchNodes() {
-            // Reusing logic from MeshCore-Portugal_KeyGen.html (Last 7 days)
-            const date = new Date();
-            date.setDate(date.getDate() - 7);
-            const updatedSinceStr = date.toISOString();
-
             try {
-                const rawUrlLIS = `https://api.letsmesh.net/api/nodes?region=LIS&updated_since=${encodeURIComponent(updatedSinceStr)}`;
-                const rawUrlOPO = `https://api.letsmesh.net/api/nodes?region=OPO&updated_since=${encodeURIComponent(updatedSinceStr)}`;
-
-                const [dataLIS, dataOPO] = await Promise.all([
-                    fetchWithProxyFallback(rawUrlLIS),
-                    fetchWithProxyFallback(rawUrlOPO)
-                ]);
-
-                let combinedNodes = [];
-                if (dataLIS && dataLIS.nodes) combinedNodes = combinedNodes.concat(dataLIS.nodes);
-                if (dataOPO && dataOPO.nodes) combinedNodes = combinedNodes.concat(dataOPO.nodes);
-
+                const url = `https://www.meshcore.pt/api/nodes/list?days=7&excludeUsers=true&v=1`;
+                const nodes = await fetchWithProxyFallback(url);
+                
                 const uniqueMap = new Map();
-                for (let n of combinedNodes) {
-                    if (n && n.public_key) {
-                        // Keep repeaters (2) and room servers (3)
-                        if (n.device_role !== 2 && n.device_role !== 3) continue;
+                for (let n of nodes) {
+                    if (n && (n.Id || n.public_key || n._id)) {
+                        const role = n.Role !== undefined ? n.Role : (n.type !== undefined ? n.type : n.device_role);
+                        if (role !== 2 && role !== 3) continue;
                         
-                        let lat = null, lon = null;
-                        if (n.position && n.position.latitude) {
-                            lat = n.position.latitude; lon = n.position.longitude;
-                        } else if (n.location && n.location.latitude) {
-                            lat = n.location.latitude; lon = n.location.longitude;
-                        } else if (n.lat) {
-                            lat = n.lat; lon = n.long || n.lon;
-                        }
+                        let lat = n.Lat || n.lat;
+                        let lon = n.Lon || n.long || n.lon;
 
                         if (lat && lon) {
-                            n.latitude = lat;
-                            n.longitude = lon;
-                            uniqueMap.set(n.public_key, n);
+                            // Converter lat e long que a API envia como String "38,5217"
+                            if (typeof lat === 'string') lat = parseFloat(lat.replace(',', '.'));
+                            if (typeof lon === 'string') lon = parseFloat(lon.replace(',', '.'));
+
+                            const nodeId = n.Id || n.public_key || n._id;
+                            uniqueMap.set(nodeId, {
+                                public_key: nodeId,
+                                long_name: n.LongName || n.name,
+                                short_name: n.ShortName || n.name,
+                                latitude: lat,
+                                longitude: lon,
+                                device_role: role
+                            });
                         }
                     }
                 }
                 activeNodes = Array.from(uniqueMap.values());
-            } catch(err) {
-                console.warn("Letsmesh API error, trying fallback...", err);
-                try {
-                    const fallbackUrl = `https://www.meshcore.pt/api/nodes/list?days=7&excludeUsers=true&v=1`;
-                    const fallbackNodes = await fetchWithProxyFallback(fallbackUrl);
-                    
-                    const uniqueMap = new Map();
-                    for (let n of fallbackNodes) {
-                        if (n && (n.Id || n.public_key || n._id)) {
-                            const role = n.Role !== undefined ? n.Role : (n.type !== undefined ? n.type : n.device_role);
-                            if (role !== 2 && role !== 3) continue;
-                            
-                            let lat = n.Lat || n.lat;
-                            let lon = n.Lon || n.long || n.lon;
-
-                            if (lat && lon) {
-                                // Converter lat e long que a API de fallback envia como String "38,5217"
-                                if (typeof lat === 'string') lat = parseFloat(lat.replace(',', '.'));
-                                if (typeof lon === 'string') lon = parseFloat(lon.replace(',', '.'));
-
-                                const nodeId = n.Id || n.public_key || n._id;
-                                uniqueMap.set(nodeId, {
-                                    public_key: nodeId,
-                                    long_name: n.LongName || n.name,
-                                    short_name: n.ShortName || n.name,
-                                    latitude: lat,
-                                    longitude: lon,
-                                    device_role: role
-                                });
-                            }
-                        }
-                    }
-                    activeNodes = Array.from(uniqueMap.values());
-                } catch(e) {
-                    console.error("Fallback also failed.", e);
-                }
+            } catch(e) {
+                console.error("Failed to load nodes from API.", e);
             }
         }
 
@@ -662,7 +636,13 @@
             const index = document.getElementById('bufferSlider').value;
             const dist = [5, 10, 20, 35, 50][index];
             const regionType = document.getElementById('typeSelect').value;
-            const baseText = regionType === 'regions' ? 'Baseado em distritos' : (regionType === 'cims' ? 'Baseado em entidades intermunicipais' : 'Baseado em distritos e entidades intermunicipais');
+            let baseText = '';
+            if (regionType === 'regions') baseText = 'Baseado em distritos';
+            else if (regionType === 'cims') baseText = 'Baseado em entidades intermunicipais ANEPC (CIM/AM)';
+            else if (regionType === 'nuts2') baseText = 'Baseado em comandos regionais ANEPC (NUTS II)';
+            else if (regionType === 'nuts2_regions') baseText = 'Baseado em comandos regionais ANEPC (NUTS II) e distritos';
+            else if (regionType === 'both') baseText = 'Baseado em entidades ANEPC (CIM/AM) e distritos';
+            else baseText = 'Baseado em comandos ANEPC (NUTS II e CIM/AM) e distritos';
             const text = baseText + ` (+${dist}km). Os nós podem pertencer a múltiplas regiões sobrepostas.`;
             document.getElementById('header-desc').innerText = text;
             document.getElementById('loader').style.display = 'flex';
@@ -685,11 +665,16 @@
             let cimGlobalExclusive = 0;
             let cimGlobalShared = 0;
             let cimGlobalUnassigned = 0;
+            let nuts2GlobalExclusive = 0;
+            let nuts2GlobalShared = 0;
+            let nuts2GlobalUnassigned = 0;
             
             const distLabels = [];
             const distData = [];
             const cimLabels = [];
             const cimData = [];
+            const nuts2Labels = [];
+            const nuts2Data = [];
 
             // Draw markers on map
             activeNodes.forEach(node => {
@@ -697,20 +682,27 @@
                 const nodeRegions = [];
                 node.distCount = 0;
                 node.cimCount = 0;
+                node.nuts2Count = 0;
 
                 if (regionsGeoJSON && regionsGeoJSON.features) {
                     regionsGeoJSON.features.forEach(feature => {
                         // Fix for booleanPointInPolygon: needs standard Polygon/MultiPolygon
                         if (turf.booleanPointInPolygon(pt, feature)) {
                             let isCim = feature.properties.is_cim === true;
-                            nodeRegions.push(formatFirmwareRegion(feature.properties.name, isCim));
+                            let isNuts2 = feature.properties.is_nuts2 === true;
+                            nodeRegions.push(formatFirmwareRegion(feature.properties.name, isCim, isNuts2));
                             
-                            let mappingKey = feature.properties.name + (isCim ? '|cim' : '|dist');
+                            let mappingKey = feature.properties.name;
+                            if (isCim) mappingKey += '|cim';
+                            else if (isNuts2) mappingKey += '|nuts2';
+                            else mappingKey += '|dist';
+                            
                             if (regionMapping[mappingKey]) {
                                 regionMapping[mappingKey].push(node);
                             }
                             
                             if (isCim) node.cimCount++;
+                            else if (isNuts2) node.nuts2Count++;
                             else node.distCount++;
                         }
                     });
@@ -723,6 +715,10 @@
                 if (node.cimCount === 1) cimGlobalExclusive++;
                 else if (node.cimCount > 1) cimGlobalShared++;
                 else cimGlobalUnassigned++;
+                
+                if (node.nuts2Count === 1) nuts2GlobalExclusive++;
+                else if (node.nuts2Count > 1) nuts2GlobalShared++;
+                else nuts2GlobalUnassigned++;
 
                 const marker = L.circleMarker([node.latitude, node.longitude], {
                     radius: 5,
@@ -764,7 +760,9 @@
                 const parts = mappingKey.split('|');
                 const name = parts[0];
                 const isCim = parts[1] === 'cim';
-                const fwTag = formatFirmwareRegion(name, isCim);
+                const isNuts2 = parts[1] === 'nuts2';
+                const isDist = parts[1] === 'dist';
+                const fwTag = formatFirmwareRegion(name, isCim, isNuts2);
                 
                 let displayName = name;
                 if (isCim && !name.startsWith('CIM') && !name.startsWith('Área') && !name.startsWith('Região Autónoma') && !name.startsWith('Península') && !name.startsWith('Grande')) {
@@ -774,6 +772,9 @@
                 if (isCim) {
                     cimLabels.push(displayName);
                     cimData.push(nodesInRegion.length);
+                } else if (isNuts2) {
+                    nuts2Labels.push(displayName);
+                    nuts2Data.push(nodesInRegion.length);
                 } else {
                     distLabels.push(displayName);
                     distData.push(nodesInRegion.length);
@@ -785,20 +786,23 @@
                     if (isCim) {
                         if (n.cimCount === 1) exclusiveCount++;
                         else if (n.cimCount > 1) sharedCount++;
+                    } else if (isNuts2) {
+                        if (n.nuts2Count === 1) exclusiveCount++;
+                        else if (n.nuts2Count > 1) sharedCount++;
                     } else {
                         if (n.distCount === 1) exclusiveCount++;
                         else if (n.distCount > 1) sharedCount++;
                     }
                 });
                 
-                const mappedNodesCount = isCim ? (activeNodes.length - cimGlobalUnassigned) : (activeNodes.length - distGlobalUnassigned);
+                const mappedNodesCount = isCim ? (activeNodes.length - cimGlobalUnassigned) : (isNuts2 ? (activeNodes.length - nuts2GlobalUnassigned) : (activeNodes.length - distGlobalUnassigned));
                 const pctOfTotal = mappedNodesCount > 0 ? ((nodesInRegion.length / mappedNodesCount) * 100).toFixed(1) : 0;
                 const excPct = nodesInRegion.length > 0 ? ((exclusiveCount / nodesInRegion.length) * 100).toFixed(0) : 0;
                 const shrPct = nodesInRegion.length > 0 ? ((sharedCount / nodesInRegion.length) * 100).toFixed(0) : 0;
                 
                 const groupTypeBadge = isCim ? 
-                    `<span style="background: var(--accent-secondary); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em;">ANEPC</span>` : 
-                    `<span style="background: var(--accent-primary); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em;">Distrito</span>`;
+                    `<span style="background: var(--accent-secondary); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em;">ANEPC (CIM/AM)</span>` : 
+                    (isNuts2 ? `<span style="background: var(--accent-secondary); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em;">ANEPC (NUTS II)</span>` : `<span style="background: var(--accent-primary); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em;">Distrito</span>`);
 
                 // Sort nodes alphabetically by name
                 nodesInRegion.sort((a, b) => {
@@ -836,7 +840,7 @@
                     // Only show first 8 chars of pubkey
                     const idSnippet = node.public_key.substring(0, 8); 
                     
-                    let isExclusive = isCim ? (node.cimCount === 1) : (node.distCount === 1);
+                    let isExclusive = isCim ? (node.cimCount === 1) : (isNuts2 ? (node.nuts2Count === 1) : (node.distCount === 1));
                     let badgeHtml = isExclusive ? 
                         `<span style="color: #2ecc71; border: 1px solid #2ecc71; font-size: 0.65em; padding: 1px 4px; border-radius: 4px;">Exclusivo</span>` : 
                         `<span style="color: #f1c40f; border: 1px solid #f1c40f; font-size: 0.65em; padding: 1px 4px; border-radius: 4px;">Partilhado</span>`;
@@ -864,7 +868,7 @@
             chartContainer.style.borderTop = '1px solid var(--border-color)';
             chartContainer.style.marginTop = '20px';
             
-            if (regionType === 'regions' || regionType === 'both') {
+            if (regionType === 'regions' || regionType === 'both' || regionType === 'nuts2_regions' || regionType === 'all') {
                 const div = document.createElement('div');
                 div.style.width = '180px';
                 div.innerHTML = `<h4 style="text-align:center; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Estatísticas - Distritos</h4><canvas id="distChart"></canvas>`;
@@ -875,15 +879,26 @@
                 divOcc.innerHTML = `<h4 style="text-align:center; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Ocupação - Distritos</h4><canvas id="distOccChart"></canvas>`;
                 chartContainer.appendChild(divOcc);
             }
-            if (regionType === 'cims' || regionType === 'both') {
+            if (regionType === 'cims' || regionType === 'both' || regionType === 'all') {
                 const div = document.createElement('div');
                 div.style.width = '180px';
-                div.innerHTML = `<h4 style="text-align:center; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Estatísticas - ANEPC</h4><canvas id="cimChart"></canvas>`;
+                div.innerHTML = `<h4 style="text-align:center; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Estatísticas - ANEPC (CIM/AM)</h4><canvas id="cimChart"></canvas>`;
                 chartContainer.appendChild(div);
                 
                 const divOcc = document.createElement('div');
                 divOcc.style.width = '180px';
-                divOcc.innerHTML = `<h4 style="text-align:center; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Ocupação - ANEPC</h4><canvas id="cimOccChart"></canvas>`;
+                divOcc.innerHTML = `<h4 style="text-align:center; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Ocupação - ANEPC (CIM/AM)</h4><canvas id="cimOccChart"></canvas>`;
+                chartContainer.appendChild(divOcc);
+            }
+            if (regionType === 'nuts2' || regionType === 'nuts2_regions' || regionType === 'all') {
+                const div = document.createElement('div');
+                div.style.width = '180px';
+                div.innerHTML = `<h4 style="text-align:center; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Estatísticas - ANEPC (NUTS II)</h4><canvas id="nuts2Chart"></canvas>`;
+                chartContainer.appendChild(div);
+                
+                const divOcc = document.createElement('div');
+                divOcc.style.width = '180px';
+                divOcc.innerHTML = `<h4 style="text-align:center; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Ocupação - ANEPC (NUTS II)</h4><canvas id="nuts2OccChart"></canvas>`;
                 chartContainer.appendChild(divOcc);
             }
             
@@ -906,7 +921,7 @@
                 return c;
             }
 
-            if (regionType === 'regions' || regionType === 'both') {
+            if (regionType === 'regions' || regionType === 'both' || regionType === 'nuts2_regions' || regionType === 'all') {
                 new Chart(document.getElementById('distChart'), {
                     type: 'doughnut',
                     data: {
@@ -938,7 +953,7 @@
                 });
             }
             
-            if (regionType === 'cims' || regionType === 'both') {
+            if (regionType === 'cims' || regionType === 'both' || regionType === 'all') {
                 new Chart(document.getElementById('cimChart'), {
                     type: 'doughnut',
                     data: {
@@ -962,6 +977,38 @@
                         datasets: [{
                             data: sortedCim.map(i => i.v),
                             backgroundColor: getColors(cimData.length),
+                            borderColor: '#1e2227',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: pieOptions
+                });
+            }
+            
+            if (regionType === 'nuts2' || regionType === 'nuts2_regions' || regionType === 'all') {
+                new Chart(document.getElementById('nuts2Chart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Exclusivos', 'Partilhados', 'Sem Região'],
+                        datasets: [{
+                            data: [nuts2GlobalExclusive, nuts2GlobalShared, nuts2GlobalUnassigned],
+                            backgroundColor: ['#2ecc71', '#f1c40f', '#95a5a6'],
+                            borderColor: '#1e2227',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: chartOptions
+                });
+                
+                const sortedNuts2 = nuts2Labels.map((l, i) => ({ l, v: nuts2Data[i] })).sort((a, b) => b.v - a.v);
+
+                new Chart(document.getElementById('nuts2OccChart'), {
+                    type: 'pie',
+                    data: {
+                        labels: sortedNuts2.map(i => i.l),
+                        datasets: [{
+                            data: sortedNuts2.map(i => i.v),
+                            backgroundColor: getColors(nuts2Data.length),
                             borderColor: '#1e2227',
                             borderWidth: 1
                         }]
