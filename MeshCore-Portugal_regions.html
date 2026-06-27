@@ -355,7 +355,7 @@
             </div>
         </div>
         <div id="header-desc" style="font-size: 0.85em; color: var(--text-secondary); padding-top: 5px; border-top: 1px solid var(--border-color);">
-            Baseado em distritos expandidos (+20km). Os nós podem pertencer a múltiplas regiões sobrepostas.
+            Baseado em comandos ANEPC (NUTS II e CIM/AM) e distritos expandidos (+20km). Os nós podem pertencer a múltiplas regiões sobrepostas.
         </div>
     </div>
 
@@ -414,25 +414,25 @@
                 if (clean === 'area-metropolitana-de-lisboa' || clean === 'area-metropolitana-do-porto') {
                     clean = clean.replace('area-metropolitana-de-', 'anepc-').replace('area-metropolitana-do-', 'anepc-');
                 } else if (clean === 'regiao-autonoma-dos-acores') {
-                    return '#ra-acores';
+                    return '#anepc-ra-acores';
                 } else if (clean === 'regiao-autonoma-da-madeira') {
-                    return '#ra-madeira';
+                    return '#anepc-ra-madeira';
                 } else {
                     clean = 'anepc-' + clean;
                 }
             } else if (isNuts2) {
                 if (clean === 'regiao-autonoma-dos-acores') {
-                    return '#ra-acores';
+                    return '#anepc-ra-acores';
                 } else if (clean === 'regiao-autonoma-da-madeira') {
-                    return '#ra-madeira';
+                    return '#anepc-ra-madeira';
                 } else {
                     clean = 'anepc-' + clean;
                 }
             } else {
                 if (clean === 'regiao-autonoma-dos-acores') {
-                    return '#ra-acores';
+                    return '#anepc-ra-acores';
                 } else if (clean === 'regiao-autonoma-da-madeira') {
-                    return '#ra-madeira';
+                    return '#anepc-ra-madeira';
                 }
                 return '#' + clean;
             }
@@ -459,14 +459,15 @@
             // Add map click listener to show all overlapping regions
             map.on('click', function(e) {
                 const pt = turf.point([e.latlng.lng, e.latlng.lat]);
-                const clickedRegions = [];
+                const clickedRegionsSet = new Set();
                 if (regionsGeoJSON && regionsGeoJSON.features) {
                     regionsGeoJSON.features.forEach(feature => {
                         if (turf.booleanPointInPolygon(pt, feature)) {
-                            clickedRegions.push(formatFirmwareRegion(feature.properties.name, feature.properties.is_cim, feature.properties.is_nuts2));
+                            clickedRegionsSet.add(formatFirmwareRegion(feature.properties.name, feature.properties.is_cim, feature.properties.is_nuts2));
                         }
                     });
                 }
+                const clickedRegions = Array.from(clickedRegionsSet);
                 if (clickedRegions.length > 0) {
                     L.popup()
                         .setLatLng(e.latlng)
