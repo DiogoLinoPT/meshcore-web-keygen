@@ -324,33 +324,34 @@
                 <button onclick="document.getElementById('helpModal').style.display='flex'" style="padding: 6px 12px; border-radius: 4px; background: var(--accent-secondary); color: white; border: none; font-size: 0.9em; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
                     <span style="font-weight: bold; background: rgba(255,255,255,0.2); border-radius: 50%; width: 18px; height: 18px; display: inline-flex; justify-content: center; align-items: center;">?</span> Ajuda
                 </button>
-                <select id="typeSelect" style="padding: 6px; border-radius: 4px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); font-size: 0.9em;" onchange="changeBufferDistance()">
-                    <option value="nuts2_regions">ANEPC (NUTS II) + Distritos</option>
-                    <option value="nuts2">ANEPC (NUTS II)</option>
-                    <option value="regions">Distritos</option>
-                    <option value="both">ANEPC (CIM/AM) + Distritos</option>
-                    <option value="cims">ANEPC (CIM/AM)</option>
-                    <option value="all" selected>ANEPC (NUTS II) + ANEPC (CIM/AM) + Distritos</option>
-                </select>
+                <!-- Distritos Control -->
                 <div style="display: flex; align-items: center; gap: 8px; background: var(--bg-card); padding: 4px 12px; border-radius: 4px; border: 1px solid var(--border-color);">
-                    <span id="bufferLabel" style="font-size: 0.9em; min-width: 115px; color: var(--text-main);">Expansão: +20km</span>
-                    <div style="display: flex; flex-direction: column; width: 120px; align-items: center;">
-                        <input type="range" id="bufferSlider" min="0" max="4" step="1" value="2" list="bufferTicks" style="cursor: pointer; width: 100%; margin: 0;" onchange="changeBufferDistance()" oninput="document.getElementById('bufferLabel').innerText = 'Expansão: +' + [5,10,20,35,50][this.value] + 'km'">
-                        <datalist id="bufferTicks">
-                            <option value="0"></option>
-                            <option value="1"></option>
-                            <option value="2"></option>
-                            <option value="3"></option>
-                            <option value="4"></option>
-                        </datalist>
-                        <div style="display: flex; justify-content: space-between; width: 100%; font-size: 0.7em; color: var(--text-secondary); padding-top: 2px; box-sizing: border-box; padding-left: 2px; padding-right: 2px;">
-                            <span>5</span>
-                            <span>10</span>
-                            <span>20</span>
-                            <span>35</span>
-                            <span>50</span>
-                        </div>
-                    </div>
+                    <input type="checkbox" id="chkDistritos" onchange="changeBufferDistance()" checked style="cursor: pointer;">
+                    <label for="chkDistritos" style="font-size: 0.9em; color: var(--text-main); cursor: pointer; user-select: none;">Distritos</label>
+                    <span id="lblDistritos" style="font-size: 0.85em; min-width: 45px; color: var(--text-secondary); margin-left: 10px;">+5km</span>
+                    <input type="range" id="sldDistritos" min="0" max="5" step="1" value="1" style="cursor: pointer; width: 80px;" onchange="changeBufferDistance()" oninput="document.getElementById('lblDistritos').innerText = '+' + [0,5,10,20,35,50][this.value] + 'km'">
+                </div>
+
+                <!-- NUTS II Control -->
+                <div style="display: flex; align-items: center; gap: 8px; background: var(--bg-card); padding: 4px 12px; border-radius: 4px; border: 1px solid var(--border-color);">
+                    <input type="checkbox" id="chkNuts2" onchange="changeBufferDistance()" checked style="cursor: pointer;">
+                    <label for="chkNuts2" style="font-size: 0.9em; color: var(--text-main); cursor: pointer; user-select: none;">NUTS II</label>
+                    <span id="lblNuts2" style="font-size: 0.85em; min-width: 45px; color: var(--text-secondary); margin-left: 10px;">+0km</span>
+                    <input type="range" id="sldNuts2" min="0" max="5" step="1" value="0" style="cursor: pointer; width: 80px;" onchange="changeBufferDistance()" oninput="document.getElementById('lblNuts2').innerText = '+' + [0,5,10,20,35,50][this.value] + 'km'">
+                </div>
+
+                <!-- CIMs Control -->
+                <div style="display: flex; align-items: center; gap: 8px; background: var(--bg-card); padding: 4px 12px; border-radius: 4px; border: 1px solid var(--border-color);">
+                    <input type="checkbox" id="chkCims" onchange="changeBufferDistance()" style="cursor: pointer;">
+                    <label for="chkCims" style="font-size: 0.9em; color: var(--text-main); cursor: pointer; user-select: none;">CIM/AM</label>
+                    <span id="lblCims" style="font-size: 0.85em; min-width: 45px; color: var(--text-secondary); margin-left: 10px;">+0km</span>
+                    <input type="range" id="sldCims" min="0" max="5" step="1" value="0" style="cursor: pointer; width: 80px;" onchange="changeBufferDistance()" oninput="document.getElementById('lblCims').innerText = '+' + [0,5,10,20,35,50][this.value] + 'km'">
+                </div>
+
+                <!-- IATA Checkbox -->
+                <div style="display: flex; align-items: center; gap: 8px; background: var(--bg-card); padding: 4px 12px; border-radius: 4px; border: 1px solid var(--border-color);">
+                    <input type="checkbox" id="showIataCheckbox" onchange="toggleIata()" style="cursor: pointer;">
+                    <label for="showIataCheckbox" style="font-size: 0.9em; color: var(--text-main); cursor: pointer; user-select: none;">IATA</label>
                 </div>
             </div>
         </div>
@@ -390,14 +391,23 @@
                 A <a href="https://www.pordata.pt/O+que+sao+NUTS" target="_blank" style="color: var(--accent-secondary); text-decoration: none;">Nomenclatura das Unidades Territoriais para Fins Estatísticos (NUTS)</a> é um sistema hierárquico europeu de divisão do território. Em Portugal, a ANEPC baseia-se nestas unidades para organizar as suas estruturas de socorro: os <b><a href="https://anmp.pt/file-viewer/?pstid=42396" target="_blank" style="color: var(--accent-secondary); text-decoration: none;">Comandos Regionais</a> (ANEPC NUTS II)</b> coincidem com grandes áreas (ex: Norte, Centro, Alentejo), enquanto os <b>Comandos Sub-Regionais (ANEPC CIM/AM)</b> coincidem com as NUTS III, englobando as <a href="https://pt.wikipedia.org/wiki/Entidades_intermunicipais_de_Portugal" target="_blank" style="color: var(--accent-secondary); text-decoration: none;">Comunidades Intermunicipais e as Áreas Metropolitanas</a>.
             </p>
 
+            <p style="margin-bottom: 15px;">
+                Temos também a possibilidade de ter o <b><a href="https://pt.wikipedia.org/wiki/C%C3%B3digo_aeroportu%C3%A1rio_IATA" target="_blank" style="color: var(--accent-secondary); text-decoration: none;">código IATA</a></b> do aeroporto principal mais próximo atribuído ao repetidor (ex: LIS, OPO, FAO). A perspetiva central desta abordagem multifacetada é dotar a infraestrutura da rede de repetidores com flexibilidade máxima. Cabe ao utilizador, através da interface, combinar ou focar-se na organização territorial (Distritos, NUTS II, CIM/AM ou IATA) que melhor servir as suas comunicações.
+            </p>
+
+            <p style="margin-bottom: 15px;">
+                Tal como acontece com as outras atribuições territoriais, se não tivermos acesso às coordenadas GPS reais do repetidor (seja por não ter o hardware, por estarem a zero/vazias ou por estarem a respeitar as definições de privacidade do utilizador), o sistema inspeciona o próprio nome atribuído ao nó. Caso o prefixo do nome indique um distrito válido, por exemplo <i>LI.MFR Socorro R8</i>, o firmware tentará utilizar como <i>fallback</i> esse distrito "LI" (Lisboa) e distritos envolventes e deduzirá uma localização aproximada.
+            </p>
+
             <p style="margin-bottom: 0;">
-                A perspetiva central desta abordagem multifacetada é dotar a infraestrutura da rede de repetidores com flexibilidade máxima. Cabe ao utilizador, através da interface, combinar ou focar-se na organização territorial (Distritos, NUTS II ou CIM/AM) que melhor servir as suas comunicações. O mais importante é que os repetidores forneçam as "ferramentas base" para suportar esta coexistência sem interferir no normal funcionamento da malha.
+                O mais importante é que os repetidores estejam preparados com estas diferentes dimensões territoriais, dando a qualquer utilizador a liberdade de escolher a região adequada para limitar a propagação das suas comunicações, evitando assim inundar a malha com pacotes onde não são necessários.
             </p>
         </div>
     </div>
 
     <script>
         let map;
+        let iataLayerGroup;
         let regionsGeoJSON;
         let activeNodes = [];
         let regionMapping = {}; // { "Lisboa": [node1, node2] }
@@ -434,13 +444,42 @@
                 } else if (clean === 'regiao-autonoma-da-madeira') {
                     return '#anepc-ra-madeira';
                 }
-                return '#' + clean;
+                return '#pt-' + clean;
             }
 
             if (clean === 'anepc-terras-de-tras-os-montes') clean = 'anepc-terras-tras-os-montes';
             if (clean === 'anepc-beiras-e-serra-da-estrela') clean = 'anepc-beiras-e-serra-estrela';
 
-            return '#' + clean;
+            return '#pt-' + clean;
+        }
+
+        const iataHubs = [
+            { id: '#pt-iata-opo', name: 'OPO', lat: 41.2481, lon: -8.6814, desc: 'Norte: Francisco Sá Carneiro' },
+            { id: '#pt-iata-lis', name: 'LIS', lat: 38.7742, lon: -9.1342, desc: 'Centro/Lisboa: Humberto Delgado' },
+            { id: '#pt-iata-byj', name: 'BYJ', lat: 38.0792, lon: -7.9308, desc: 'Alentejo: Aeroporto de Beja' },
+            { id: '#pt-iata-fao', name: 'FAO', lat: 37.0144, lon: -7.9659, desc: 'Sul: Gago Coutinho / Faro' },
+            { id: '#pt-iata-pdl', name: 'PDL', lat: 37.7412, lon: -25.6978, desc: 'Açores: João Paulo II' },
+            { id: '#pt-iata-ter', name: 'TER', lat: 38.7619, lon: -27.0908, desc: 'Açores: Lajes' },
+            { id: '#pt-iata-fnc', name: 'FNC', lat: 32.6970, lon: -16.7744, desc: 'Madeira: Cristiano Ronaldo' }
+        ];
+
+        function getClosestIata(lat, lon) {
+            let minD = Infinity;
+            let closest = null;
+            const toRad = x => x * Math.PI / 180;
+            for (const hub of iataHubs) {
+                const R = 6371;
+                const dLat = toRad(hub.lat - lat);
+                const dLon = toRad(hub.lon - lon);
+                const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(toRad(lat)) * Math.cos(toRad(hub.lat)) * Math.sin(dLon/2) * Math.sin(dLon/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                const d = R * c;
+                if (d < minD) {
+                    minD = d;
+                    closest = hub.id;
+                }
+            }
+            return closest;
         }
 
         function initMap() {
@@ -469,12 +508,51 @@
                 }
                 const clickedRegions = Array.from(clickedRegionsSet);
                 if (clickedRegions.length > 0) {
+                    const closestIata = getClosestIata(e.latlng.lat, e.latlng.lng);
+                    const showIata = document.getElementById('showIataCheckbox') && document.getElementById('showIataCheckbox').checked;
+                    if (closestIata && showIata) clickedRegions.push(closestIata);
+                    
+                    clickedRegions.push('#pt');
+                    clickedRegions.push('#eu');
+
                     L.popup()
                         .setLatLng(e.latlng)
                         .setContent(`<b>Regiões neste ponto (${clickedRegions.length}):</b><br><ul style="margin-top: 5px; padding-left: 20px;"><li>${clickedRegions.join('</li><li>')}</li></ul>`)
                         .openOn(map);
                 }
             });
+
+            // Add IATA Hub Markers
+            iataLayerGroup = L.layerGroup();
+            iataHubs.forEach(hub => {
+                const iconHtml = `
+                <div style="position: relative; background-color: var(--accent-primary); color: white; border-radius: 4px; padding: 2px 8px 2px 10px; font-weight: bold; border: 1px solid rgba(255,255,255,0.7); box-shadow: 0 2px 4px rgba(0,0,0,0.4); font-size: 12px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; cursor: pointer;">
+                    <span>✈️</span><span>${hub.name}</span>
+                    <div style="position: absolute; top: -8px; left: -10px; background-color: var(--bg-card); color: var(--text-main); font-size: 8px; padding: 1px 3px; border-radius: 3px; border: 1px solid var(--border-color); font-weight: bold; letter-spacing: 0.5px;">IATA</div>
+                </div>`;
+                const customIcon = L.divIcon({
+                    html: iconHtml,
+                    className: 'iata-marker-icon', // no default leaflet styling
+                    iconSize: [60, 24],
+                    iconAnchor: [30, 12],
+                    popupAnchor: [0, -12]
+                });
+                L.marker([hub.lat, hub.lon], { icon: customIcon, zIndexOffset: 1000 })
+                    .bindPopup(`<div style="text-align:center;"><b>${hub.id}</b><br><span style="font-size:0.9em;color:var(--text-secondary);">${hub.desc}</span></div>`)
+                    .addTo(iataLayerGroup);
+            });
+        }
+
+        function toggleIata() {
+            const checkbox = document.getElementById('showIataCheckbox');
+            if (checkbox.checked) {
+                iataLayerGroup.addTo(map);
+            } else {
+                map.removeLayer(iataLayerGroup);
+            }
+            if (typeof calculateIntersectionsAndRender === 'function') {
+                calculateIntersectionsAndRender();
+            }
         }
 
         function toggleRegion(el) {
@@ -511,25 +589,38 @@
             }
         }
 
-        async function fetchRegions(distance = 20) {
+        async function fetchRegions() {
             try {
-                const regionType = document.getElementById('typeSelect') ? document.getElementById('typeSelect').value : 'regions';
                 let features = [];
+                const dists = [0, 5, 10, 20, 35, 50];
 
-                if (regionType === 'both' || regionType === 'regions' || regionType === 'nuts2_regions' || regionType === 'all') {
-                    const res = await fetch('data/pt_regions_' + distance + 'km.geojson');
-                    const json = await res.json();
-                    features = features.concat(json.features);
+                const useDistritos = document.getElementById('chkDistritos').checked;
+                const useNuts2 = document.getElementById('chkNuts2').checked;
+                const useCims = document.getElementById('chkCims').checked;
+
+                if (useDistritos) {
+                    const dist = dists[document.getElementById('sldDistritos').value];
+                    const res = await fetch('data/pt_districts_' + dist + 'km.geojson');
+                    if (res.ok) {
+                        const json = await res.json();
+                        features = features.concat(json.features);
+                    }
                 }
-                if (regionType === 'both' || regionType === 'cims' || regionType === 'all') {
-                    const res = await fetch('data/pt_cims_' + distance + 'km.geojson');
-                    const json = await res.json();
-                    features = features.concat(json.features);
+                if (useCims) {
+                    const dist = dists[document.getElementById('sldCims').value];
+                    const res = await fetch('data/pt_cims_' + dist + 'km.geojson');
+                    if (res.ok) {
+                        const json = await res.json();
+                        features = features.concat(json.features);
+                    }
                 }
-                if (regionType === 'nuts2' || regionType === 'nuts2_regions' || regionType === 'all') {
-                    const res = await fetch('data/pt_nuts2_' + distance + 'km.geojson');
-                    const json = await res.json();
-                    features = features.concat(json.features);
+                if (useNuts2) {
+                    const dist = dists[document.getElementById('sldNuts2').value];
+                    const res = await fetch('data/pt_nuts2_' + dist + 'km.geojson');
+                    if (res.ok) {
+                        const json = await res.json();
+                        features = features.concat(json.features);
+                    }
                 }
 
                 regionsGeoJSON = { type: "FeatureCollection", features: features };
@@ -634,17 +725,20 @@
         }
 
         async function changeBufferDistance() {
-            const index = document.getElementById('bufferSlider').value;
-            const dist = [5, 10, 20, 35, 50][index];
-            const regionType = document.getElementById('typeSelect').value;
-            let baseText = '';
-            if (regionType === 'regions') baseText = 'Baseado em distritos';
-            else if (regionType === 'cims') baseText = 'Baseado em entidades intermunicipais ANEPC (CIM/AM)';
-            else if (regionType === 'nuts2') baseText = 'Baseado em comandos regionais ANEPC (NUTS II)';
-            else if (regionType === 'nuts2_regions') baseText = 'Baseado em comandos regionais ANEPC (NUTS II) e distritos';
-            else if (regionType === 'both') baseText = 'Baseado em entidades ANEPC (CIM/AM) e distritos';
-            else baseText = 'Baseado em comandos ANEPC (NUTS II e CIM/AM) e distritos';
-            const text = baseText + ` (+${dist}km). Os nós podem pertencer a múltiplas regiões sobrepostas.`;
+            const useDistritos = document.getElementById('chkDistritos').checked;
+            const useNuts2 = document.getElementById('chkNuts2').checked;
+            const useCims = document.getElementById('chkCims').checked;
+            
+            let activeLayers = [];
+            if (useDistritos) activeLayers.push('distritos');
+            if (useNuts2) activeLayers.push('comandos regionais ANEPC (NUTS II)');
+            if (useCims) activeLayers.push('entidades intermunicipais ANEPC (CIM/AM)');
+            
+            let text = 'Nenhuma camada selecionada.';
+            if (activeLayers.length > 0) {
+                text = 'Baseado em ' + activeLayers.join(' e ') + '. Os nós podem pertencer a múltiplas regiões sobrepostas.';
+            }
+
             document.getElementById('header-desc').innerText = text;
             document.getElementById('loader').style.display = 'flex';
             
@@ -654,7 +748,7 @@
             regionMapping = {};
             markers = {};
             
-            await fetchRegions(dist);
+            await fetchRegions();
             calculateIntersectionsAndRender();
             document.getElementById('loader').style.display = 'none';
         }
@@ -733,6 +827,16 @@
                 const name = node.name || node.short_name || node.long_name || "Nó Desconhecido";
                 const pubKey = node.public_key;
                 const shortKey = pubKey.length > 12 ? `${pubKey.substring(0,6)} (...) ${pubKey.substring(pubKey.length-6)}` : pubKey;
+                
+                const closestIata = getClosestIata(node.latitude, node.longitude);
+                const showIata = document.getElementById('showIataCheckbox') && document.getElementById('showIataCheckbox').checked;
+                if (closestIata && showIata) nodeRegions.push(closestIata);
+                
+                if (nodeRegions.length > 0) {
+                    nodeRegions.push('#pt');
+                    nodeRegions.push('#eu');
+                }
+
                 const regionsHtml = nodeRegions.length > 0 ? `<br><br><b>Inserido em ${nodeRegions.length} Região(ões):</b><ul style="margin-top: 5px; padding-left: 20px;"><li>${nodeRegions.join('</li><li>')}</li></ul>` : '';
                 
                 marker.bindPopup(`<b>${name}</b><br><small>${shortKey}</small>${regionsHtml}`);
@@ -742,6 +846,10 @@
             // Build UI
             const listEl = document.getElementById('region-list');
             listEl.innerHTML = '';
+            
+            if (!regionsGeoJSON || !regionsGeoJSON.features || regionsGeoJSON.features.length === 0) {
+                listEl.innerHTML = '<div style="padding: 30px 20px; text-align: center; color: var(--text-secondary); background: var(--bg-card); margin-bottom: 20px; border-radius: 8px; border: 1px dashed var(--border-color); font-size: 0.95em;">Por favor, ative pelo menos uma camada de regiões (Distritos, NUTS II ou CIM/AM) para visualizar os nós mapeados.</div>';
+            }
 
             const sortedRegions = Object.keys(regionMapping).sort((a, b) => {
                 const aType = a.split('|')[1];
@@ -858,7 +966,9 @@
             });
             
             // Render footer charts
-            const regionType = document.getElementById('typeSelect') ? document.getElementById('typeSelect').value : 'regions';
+            const useDistritos = document.getElementById('chkDistritos').checked;
+            const useNuts2 = document.getElementById('chkNuts2').checked;
+            const useCims = document.getElementById('chkCims').checked;
             
             const chartContainer = document.createElement('div');
             chartContainer.style.padding = '20px 10px';
@@ -869,7 +979,7 @@
             chartContainer.style.borderTop = '1px solid var(--border-color)';
             chartContainer.style.marginTop = '20px';
             
-            if (regionType === 'regions' || regionType === 'both' || regionType === 'nuts2_regions' || regionType === 'all') {
+            if (useDistritos) {
                 const div = document.createElement('div');
                 div.style.width = '180px';
                 div.innerHTML = `<h4 style="text-align:center; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Estatísticas - Distritos</h4><canvas id="distChart"></canvas>`;
@@ -880,7 +990,7 @@
                 divOcc.innerHTML = `<h4 style="text-align:center; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Ocupação - Distritos</h4><canvas id="distOccChart"></canvas>`;
                 chartContainer.appendChild(divOcc);
             }
-            if (regionType === 'cims' || regionType === 'both' || regionType === 'all') {
+            if (useCims) {
                 const div = document.createElement('div');
                 div.style.width = '180px';
                 div.innerHTML = `<h4 style="text-align:center; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Estatísticas - ANEPC (CIM/AM)</h4><canvas id="cimChart"></canvas>`;
@@ -891,7 +1001,7 @@
                 divOcc.innerHTML = `<h4 style="text-align:center; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Ocupação - ANEPC (CIM/AM)</h4><canvas id="cimOccChart"></canvas>`;
                 chartContainer.appendChild(divOcc);
             }
-            if (regionType === 'nuts2' || regionType === 'nuts2_regions' || regionType === 'all') {
+            if (useNuts2) {
                 const div = document.createElement('div');
                 div.style.width = '180px';
                 div.innerHTML = `<h4 style="text-align:center; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Estatísticas - ANEPC (NUTS II)</h4><canvas id="nuts2Chart"></canvas>`;
@@ -922,7 +1032,7 @@
                 return c;
             }
 
-            if (regionType === 'regions' || regionType === 'both' || regionType === 'nuts2_regions' || regionType === 'all') {
+            if (useDistritos) {
                 new Chart(document.getElementById('distChart'), {
                     type: 'doughnut',
                     data: {
@@ -954,7 +1064,7 @@
                 });
             }
             
-            if (regionType === 'cims' || regionType === 'both' || regionType === 'all') {
+            if (useCims) {
                 new Chart(document.getElementById('cimChart'), {
                     type: 'doughnut',
                     data: {
@@ -986,7 +1096,7 @@
                 });
             }
             
-            if (regionType === 'nuts2' || regionType === 'nuts2_regions' || regionType === 'all') {
+            if (useNuts2) {
                 new Chart(document.getElementById('nuts2Chart'), {
                     type: 'doughnut',
                     data: {
@@ -1020,11 +1130,10 @@
         }
 
         window.onload = async () => {
+            document.getElementById('loader').style.display = 'flex';
             initMap();
-            await fetchRegions();
             await fetchNodes();
-            document.getElementById('loader').style.display = 'none';
-            calculateIntersectionsAndRender();
+            await changeBufferDistance();
         };
 
     </script>
