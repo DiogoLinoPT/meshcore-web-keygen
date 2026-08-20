@@ -328,8 +328,8 @@
                 <div style="display: flex; align-items: center; gap: 8px; background: var(--bg-card); padding: 4px 12px; border-radius: 4px; border: 1px solid var(--border-color);">
                     <input type="checkbox" id="chkDistritos" onchange="changeBufferDistance()" checked style="cursor: pointer;">
                     <label for="chkDistritos" style="font-size: 0.9em; color: var(--text-main); cursor: pointer; user-select: none;">Distritos</label>
-                    <span id="lblDistritos" style="font-size: 0.85em; min-width: 45px; color: var(--text-secondary); margin-left: 10px;">+5km</span>
-                    <input type="range" id="sldDistritos" min="0" max="5" step="1" value="1" style="cursor: pointer; width: 80px;" onchange="changeBufferDistance()" oninput="document.getElementById('lblDistritos').innerText = '+' + [0,5,10,20,35,50][this.value] + 'km'">
+                    <span id="lblDistritos" style="font-size: 0.85em; min-width: 45px; color: var(--text-secondary); margin-left: 10px;">+0km</span>
+                    <input type="range" id="sldDistritos" min="0" max="5" step="1" value="0" style="cursor: pointer; width: 80px;" onchange="changeBufferDistance()" oninput="document.getElementById('lblDistritos').innerText = '+' + [0,5,10,20,35,50][this.value] + 'km'">
                 </div>
 
                 <!-- NUTS II Control -->
@@ -420,37 +420,20 @@
 
         function formatFirmwareRegion(name, isCim, isNuts2) {
             let clean = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ /g, '-');
-            if (isCim) {
-                if (clean === 'area-metropolitana-de-lisboa' || clean === 'area-metropolitana-do-porto') {
-                    clean = clean.replace('area-metropolitana-de-', 'anepc-').replace('area-metropolitana-do-', 'anepc-');
-                } else if (clean === 'regiao-autonoma-dos-acores') {
-                    return '#anepc-ra-acores';
-                } else if (clean === 'regiao-autonoma-da-madeira') {
-                    return '#anepc-ra-madeira';
-                } else {
-                    clean = 'anepc-' + clean;
-                }
-            } else if (isNuts2) {
-                if (clean === 'regiao-autonoma-dos-acores') {
-                    return '#anepc-ra-acores';
-                } else if (clean === 'regiao-autonoma-da-madeira') {
-                    return '#anepc-ra-madeira';
-                } else {
-                    clean = 'anepc-' + clean;
-                }
+            
+            if (isCim || isNuts2) {
+                if (clean === 'lisboa' || clean === 'area-metropolitana-de-lisboa') return '#pt-anepc-lisboa-vale-tejo';
+                if (clean === 'area-metropolitana-do-porto') return '#pt-anepc-porto';
+                if (clean === 'regiao-autonoma-dos-acores') return '#pt-anepc-acores';
+                if (clean === 'regiao-autonoma-da-madeira') return '#pt-anepc-madeira';
+                if (clean === 'terras-de-tras-os-montes') return '#pt-anepc-terras-tras-os-montes';
+                if (clean === 'beiras-e-serra-da-estrela') return '#pt-anepc-beiras-e-serra-estrela';
+                return '#pt-anepc-' + clean;
             } else {
-                if (clean === 'regiao-autonoma-dos-acores') {
-                    return '#anepc-ra-acores';
-                } else if (clean === 'regiao-autonoma-da-madeira') {
-                    return '#anepc-ra-madeira';
-                }
+                if (clean === 'regiao-autonoma-dos-acores') return '#pt-acores';
+                if (clean === 'regiao-autonoma-da-madeira') return '#pt-madeira';
                 return '#pt-' + clean;
             }
-
-            if (clean === 'anepc-terras-de-tras-os-montes') clean = 'anepc-terras-tras-os-montes';
-            if (clean === 'anepc-beiras-e-serra-da-estrela') clean = 'anepc-beiras-e-serra-estrela';
-
-            return '#pt-' + clean;
         }
 
         const iataHubs = [
