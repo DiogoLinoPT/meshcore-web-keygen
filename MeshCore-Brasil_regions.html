@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="pt" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:,">
+    <title>MeshCore Brasil - Regiões / Scopes</title>
+
+    <!-- Leaflet JS & CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Turf JS for Spatial calculations -->
+    <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
+
+    <!-- Chart JS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg-main: #f8f9fa;
+            --bg-card: #ffffff;
+            --text-main: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --accent-primary: #f05e16;
+            --accent-secondary: #3498db;
+            --accent-hover: #d24e10;
+            --border-color: #e0e0e0;
+            --header-bg: #e2e8f0;
+            --header-text: #1a202c;
+            --sidebar-bg: #ffffff;
+            --node-hover: #f1f5f9;
+        }
+
+        [data-theme="dark"] {
+            --bg-main: #111113;
+            --bg-card: #1a1a1c;
+            --text-main: #f8f9fa;
+            --text-secondary: #a0aec0;
+            --accent-primary: #f05e16;
+            --accent-secondary: #3498db;
+            --accent-hover: #ff7635;
+            --border-color: #2d3748;
+            --header-bg: #1a1a1c;
+            --header-text: #f8f9fa;
+            --sidebar-bg: #1a1a1c;
+            --node-hover: #2d3748;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: var(--header-bg);
+            color: var(--header-text);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--accent-primary);
+        }
+
+        .header h1 {
+            font-size: 1.5em;
+            font-weight: 700;
+        }
+
+        .header nav a {
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 600;
+            margin-right: 15px;
+        }
+        
+        .header nav a:hover {
+            text-decoration: underline;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            position: relative;
+            min-height: 0;
+        }
+
+        #map-container {
+            flex: 2;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        #sidebar {
+            flex: 1;
+            background: var(--sidebar-bg);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(0,0,0,0.02);
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .region-group {
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .region-header {
+            background: var(--bg-main);
+            padding: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .region-header:hover {
+            background: var(--node-hover);
+        }
+
+        .region-nodes {
+            display: none;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .region-nodes.open {
+            display: block;
+        }
+
+        .node-item {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9em;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .node-item:last-child {
+            border-bottom: none;
+        }
+
+        .node-item:hover {
+            background: var(--node-hover);
+            color: var(--accent-primary);
+        }
+
+        .node-id {
+            font-family: monospace;
+            color: var(--text-secondary);
+        }
+
+        .loader-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 1000;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .mobile-toggle {
+            display: none;
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2000;
+            background: var(--accent-primary);
+            color: #fff;
+            border: none;
+            border-radius: 30px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: background 0.3s, transform 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mobile-toggle:active {
+            transform: translateX(-50%) scale(0.95);
+        }
+
+        /* Custom Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: var(--text-secondary);
+            border-radius: 3px;
+            opacity: 0.7;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -6px;
+            box-shadow: 0 0 4px rgba(0,0,0,0.5);
+        }
+        input[type=range]:hover::-webkit-slider-thumb {
+            background: var(--accent-hover);
+            transform: scale(1.1);
+        }
+        input[type=range]::-moz-range-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: var(--text-secondary);
+            border-radius: 3px;
+            opacity: 0.7;
+        }
+        input[type=range]::-moz-range-thumb {
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 4px rgba(0,0,0,0.5);
+        }
+        input[type=range]:hover::-moz-range-thumb {
+            background: var(--accent-hover);
+            transform: scale(1.1);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+                overflow: hidden;
+            }
+            
+            #sidebar {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 1000;
+                transform: translateY(100%);
+                transition: transform 0.3s ease-in-out;
+            }
+            
+            body.show-sidebar #sidebar {
+                transform: translateY(0);
+            }
+            
+            .mobile-toggle {
+                display: flex !important;
+            }
+            
+            .title-separator {
+                display: none;
+            }
+            
+            .title-subtitle {
+                display: block;
+                font-size: 0.85em;
+                margin-top: 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header" style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <div>
+                <h1 style="margin: 0; line-height: 1.2; font-size: 1.6em;">
+                    <span>MeshCore Brasil</span><span class="title-separator"> - </span><span class="title-subtitle">Proposta de Regiões / Scopes</span>
+                </h1>
+                <div id="header-subtitle" style="font-size: 0.85em; color: var(--text-secondary); margin-top: 2px;">por Diogo Lino &nbsp;|&nbsp; A ligar à rede MeshCore...</div>
+            </div>
+            
+            <div class="global-controls" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <button onclick="document.getElementById('helpModal').style.display='flex'" style="padding: 6px 12px; border-radius: 4px; background: var(--accent-secondary); color: white; border: none; font-size: 0.9em; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                    <span style="font-weight: bold; background: rgba(255,255,255,0.2); border-radius: 50%; width: 18px; height: 18px; display: inline-flex; justify-content: center; align-items: center;">?</span> Ajuda
+                </button>
+                <div style="display: flex; align-items: center; gap: 20px; background: var(--bg-card); padding: 4px 12px; border-radius: 4px; border: 1px solid var(--border-color);">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="chkUF" onchange="changeBufferDistance()" checked style="cursor: pointer;">
+                        <label for="chkUF" style="font-size: 0.9em; color: var(--text-main); cursor: pointer; user-select: none;">Estados (UF)</label>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="chkDDD" onchange="changeBufferDistance()" checked style="cursor: pointer;">
+                        <label for="chkDDD" style="font-size: 0.9em; color: var(--text-main); cursor: pointer; user-select: none;">Códigos de área (DDD)</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="header-desc" style="font-size: 0.85em; color: var(--text-secondary); padding-top: 5px; border-top: 1px solid var(--border-color);">
+            Baseado em Estados (UF) e Códigos de área (DDD). Os nós são mapeados para a região onde se encontram geograficamente.
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div id="map-container">
+            <div id="loader" class="loader-overlay">A carregar Nós e Fronteiras...</div>
+            <div id="map"></div>
+        </div>
+        <div id="sidebar">
+            <div class="sidebar-header">
+                <h3>Nós por Região</h3>
+            </div>
+            <div class="sidebar-content" id="region-list">
+                <!-- Javascript will populate this -->
+            </div>
+        </div>
+    </div>
+    
+    <button id="mobileToggleBtn" class="mobile-toggle" onclick="toggleMobileView()" style="display: none;">ð Ver Listagem</button>
+
+    <!-- Help Modal Overlay -->
+    <div id="helpModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 3000; justify-content: center; align-items: center; padding: 20px;">
+        <div style="background: var(--bg-card); color: var(--text-main); padding: 30px; border-radius: 8px; max-width: 700px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); line-height: 1.6;">
+            <button onclick="document.getElementById('helpModal').style.display='none'" style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.5em; color: var(--text-secondary); cursor: pointer;">&times;</button>
+            <h2 style="margin-bottom: 20px; color: var(--accent-primary);">Sobre a Organização Territorial Brasileira</h2>
+            
+            <p style="margin-bottom: 15px;">
+                Esta proposta contempla múltiplas dimensões geográficas aplicadas à infraestrutura da rede descentralizada no território brasileiro. Por um lado, temos a divisão administrativa baseada nos <b>Estados Brasileiros (Nível 2)</b>, correspondendo às siglas das Unidades Federativas (UF) (ex: #br-sp, #br-rj).
+            </p>
+
+            <p style="margin-bottom: 15px;">
+                Por outro lado, adotamos a subdivisão técnica dos <b>Códigos de Área (DDD) (Nível 3)</b>, permitindo isolar o tráfego em regiões locais ou metropolitanas sem saturar as conexões de todo o Estado. A cobertura do mapa de DDD reflete as delimitações oficiais de longa distância, englobando perfeitamente todo o litoral e interior continental.
+            </p>
+
+            <p style="margin-bottom: 0;">
+                O mais importante é que os repetidores (<i>repeaters</i>) estejam preparados com estas diferentes dimensões territoriais, dando aos usuários a liberdade de escolher o canal (ex: #br-sp ou #br-sp-11) mais adequado para limitar a propagação de suas mensagens, evitando assim inundar a rede com pacotes RF onde não são necessários.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let map;
+        let iataLayerGroup;
+        let regionsGeoJSON;
+        let activeNodes = [];
+        let regionMapping = {}; // { "Lisboa": [node1, node2] }
+        let markers = {};
+        let geoJsonLayer = null;
+        let markerLayerGroup = null;
+
+        // Cores para os polígonos
+        const regionColors = ['#f05e16', '#3498db', '#9b59b6', '#2ecc71', '#f1c40f', '#e74c3c', '#1abc9c'];
+
+        const dddToUf = {
+    '11': 'sp', '12': 'sp', '13': 'sp', '14': 'sp', '15': 'sp', '16': 'sp', '17': 'sp', '18': 'sp', '19': 'sp',
+    '21': 'rj', '22': 'rj', '24': 'rj', '27': 'es', '28': 'es',
+    '31': 'mg', '32': 'mg', '33': 'mg', '34': 'mg', '35': 'mg', '37': 'mg', '38': 'mg',
+    '41': 'pr', '42': 'pr', '43': 'pr', '44': 'pr', '45': 'pr', '46': 'pr',
+    '47': 'sc', '48': 'sc', '49': 'sc',
+    '51': 'rs', '53': 'rs', '54': 'rs', '55': 'rs',
+    '61': 'df', '62': 'go', '64': 'go', '63': 'to', '65': 'mt', '66': 'mt', '67': 'ms', '68': 'ac', '69': 'ro',
+    '71': 'ba', '73': 'ba', '74': 'ba', '75': 'ba', '77': 'ba', '79': 'se',
+    '81': 'pe', '87': 'pe', '82': 'al', '83': 'pb', '84': 'rn', '85': 'ce', '88': 'ce', '86': 'pi', '89': 'pi',
+    '91': 'pa', '93': 'pa', '94': 'pa', '92': 'am', '97': 'am', '95': 'rr', '96': 'ap', '98': 'ma', '99': 'ma'
+};
+        function formatFirmwareRegion(name, isDDD) {
+            let clean = name.toLowerCase().normalize("NFD").replace(/[Ì-Í¯]/g, "").replace(/ /g, '-');
+            if (isDDD) {
+                const uf = dddToUf[clean] || 'unknown';
+                return '#br-' + uf + '-' + clean; // ex: #br-sp-11
+            }
+            const ufMap = {
+                'sao-paulo': 'sp', 'rio-de-janeiro': 'rj', 'minas-gerais': 'mg', 'bahia': 'ba',
+                'rio-grande-do-sul': 'rs', 'parana': 'pr', 'santa-catarina': 'sc', 'ceara': 'ce',
+                'pernambuco': 'pe', 'goias': 'go', 'maranhao': 'ma', 'espirito-santo': 'es',
+                'mato-grosso': 'mt', 'mato-grosso-do-sul': 'ms', 'paraiba': 'pb',
+                'rio-grande-do-norte': 'rn', 'alagoas': 'al', 'piaui': 'pi',
+                'distrito-federal': 'df', 'sergipe': 'se', 'rondonia': 'ro', 'tocantins': 'to',
+                'acre': 'ac', 'amapa': 'ap', 'roraima': 'rr'
+            };
+            return '#br-' + (ufMap[clean] || clean);
+        }
+
+        const iataHubs = [];
+
+        function getClosestIata(lat, lon) {
+            let minD = Infinity;
+            let closest = null;
+            const toRad = x => x * Math.PI / 180;
+            for (const hub of iataHubs) {
+                const R = 6371;
+                const dLat = toRad(hub.lat - lat);
+                const dLon = toRad(hub.lon - lon);
+                const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(toRad(lat)) * Math.cos(toRad(hub.lat)) * Math.sin(dLon/2) * Math.sin(dLon/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                const d = R * c;
+                if (d < minD) {
+                    minD = d;
+                    closest = hub.id;
+                }
+            }
+            return closest;
+        }
+
+        function initMap() {
+            map = L.map('map').setView([-14.235, -51.925], 4);
+            
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const tileUrl = isDark 
+                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' 
+                : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+            L.tileLayer(tileUrl, {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+            markerLayerGroup = L.layerGroup().addTo(map);
+
+            // Add map click listener to show all overlapping regions
+            map.on('click', function(e) {
+                const pt = turf.point([e.latlng.lng, e.latlng.lat]);
+                const clickedRegionsSet = new Set();
+                if (regionsGeoJSON && regionsGeoJSON.features) {
+                    regionsGeoJSON.features.forEach(feature => {
+                        if (turf.booleanPointInPolygon(pt, feature)) {
+                            clickedRegionsSet.add(formatFirmwareRegion(feature.properties.name, feature.properties.layerType === 'ddd'));
+                        }
+                    });
+                }
+                const clickedRegions = Array.from(clickedRegionsSet);
+                if (clickedRegions.length > 0) {
+                    const closestIata = getClosestIata(e.latlng.lat, e.latlng.lng);
+                    const showIata = document.getElementById('showIataCheckbox') && document.getElementById('showIataCheckbox').checked;
+                    
+                    
+                    clickedRegions.push('#br');
+                    
+
+                    L.popup()
+                        .setLatLng(e.latlng)
+                        .setContent(`<b>Regiões neste ponto (${clickedRegions.length}):</b><br><ul style="margin-top: 5px; padding-left: 20px;"><li>${clickedRegions.join('</li><li>')}</li></ul>`)
+                        .openOn(map);
+                }
+            });
+
+            // Add IATA Hub Markers
+            iataLayerGroup = L.layerGroup();
+            iataHubs.forEach(hub => {
+                const iconHtml = `
+                <div style="position: relative; background-color: var(--accent-primary); color: white; border-radius: 4px; padding: 2px 8px 2px 10px; font-weight: bold; border: 1px solid rgba(255,255,255,0.7); box-shadow: 0 2px 4px rgba(0,0,0,0.4); font-size: 12px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; cursor: pointer;">
+                    <span>âï¸</span><span>${hub.name}</span>
+                    <div style="position: absolute; top: -8px; left: -10px; background-color: var(--bg-card); color: var(--text-main); font-size: 8px; padding: 1px 3px; border-radius: 3px; border: 1px solid var(--border-color); font-weight: bold; letter-spacing: 0.5px;">IATA</div>
+                </div>`;
+                const customIcon = L.divIcon({
+                    html: iconHtml,
+                    className: 'iata-marker-icon', // no default leaflet styling
+                    iconSize: [60, 24],
+                    iconAnchor: [30, 12],
+                    popupAnchor: [0, -12]
+                });
+                L.marker([hub.lat, hub.lon], { icon: customIcon, zIndexOffset: 1000 })
+                    .bindPopup(`<div style="text-align:center;"><b>${hub.id}</b><br><span style="font-size:0.9em;color:var(--text-secondary);">${hub.desc}</span></div>`)
+                    .addTo(iataLayerGroup);
+            });
+        }
+
+        function toggleIata() {
+            const checkbox = document.getElementById('showIataCheckbox');
+            if (checkbox.checked) {
+                iataLayerGroup.addTo(map);
+            } else {
+                map.removeLayer(iataLayerGroup);
+            }
+            if (typeof calculateIntersectionsAndRender === 'function') {
+                calculateIntersectionsAndRender();
+            }
+        }
+
+        function toggleRegion(el) {
+            const content = el.nextElementSibling;
+            if(content.classList.contains('open')) {
+                content.classList.remove('open');
+                el.querySelector('.toggle-icon').innerText = '+';
+            } else {
+                content.classList.add('open');
+                el.querySelector('.toggle-icon').innerText = '-';
+            }
+        }
+
+        function focusNode(lat, lon) {
+            map.setView([lat, lon], 12);
+            if (window.innerWidth <= 768 && document.body.classList.contains('show-sidebar')) {
+                toggleMobileView();
+            }
+        }
+
+        function toggleMobileView() {
+            const body = document.body;
+            const btn = document.getElementById('mobileToggleBtn');
+            body.classList.toggle('show-sidebar');
+            
+            if (body.classList.contains('show-sidebar')) {
+                btn.innerHTML = 'ð Ver Mapa';
+                btn.style.background = 'var(--text-main)';
+                btn.style.color = 'var(--bg-card)';
+            } else {
+                btn.innerHTML = 'ð Ver Listagem';
+                btn.style.background = 'var(--accent-primary)';
+                btn.style.color = '#fff';
+            }
+        }
+
+        async function fetchRegions() {
+            try {
+                const useUF = document.getElementById('chkUF') ? document.getElementById('chkUF').checked : false;
+                const useDDD = document.getElementById('chkDDD') ? document.getElementById('chkDDD').checked : false;
+
+                let loadPromises = [];
+                if (useUF) {
+                    loadPromises.push(
+                        fetch('data-br/br_uf_0km.geojson').then(r => r.json()).then(data => {
+                            data.features.forEach(f => f.properties.layerType = 'uf');
+                            return data;
+                        })
+                    );
+                }
+                if (useDDD) {
+                    loadPromises.push(
+                        fetch('data-br/br_ddd_0km.geojson').then(r => {
+                            if (r.ok) return r.json();
+                            return {type: "FeatureCollection", features: []};
+                        }).then(data => {
+                            data.features.forEach(f => f.properties.layerType = 'ddd');
+                            return data;
+                        }).catch(e => ({type: "FeatureCollection", features: []}))
+                    );
+                }
+
+                const results = await Promise.all(loadPromises);
+                let combinedFeatures = [];
+                results.forEach(res => {
+                    if (res && res.features) combinedFeatures = combinedFeatures.concat(res.features);
+                });
+
+                regionsGeoJSON = { type: "FeatureCollection", features: combinedFeatures };
+                
+                geoJsonLayer = L.geoJSON(regionsGeoJSON, {
+                    style: function (feature) {
+                        let color = '#3388ff';
+                        if (feature.properties.layerType === 'uf') color = '#f05e16';
+                        if (feature.properties.layerType === 'ddd') color = '#3498db';
+                        return {
+                            fillColor: color,
+                            weight: 2,
+                            opacity: 1,
+                            color: color,
+                            fillOpacity: 0.1
+                        };
+                    },
+                    onEachFeature: function (feature, layer) {
+                        let isDDD = feature.properties.layerType === 'ddd';
+                        let mappingKey = feature.properties.name + (isDDD ? '|ddd' : '|uf');
+                        regionMapping[mappingKey] = [];
+                    }
+                }).addTo(map);
+
+            } catch (err) {
+                console.error("Failed to load region boundaries", err);
+            }
+        }
+
+        async function fetchWithProxyFallback(url, customTimeout = 4000) {
+            const fetchWithTimeout = async (resource, options = {}) => {
+                const { timeout = customTimeout } = options;
+                const controller = new AbortController();
+                const id = setTimeout(() => controller.abort(), timeout);
+                const response = await fetch(resource, { ...options, signal: controller.signal });
+                clearTimeout(id);
+                return response;
+            };
+
+            // First, try direct fetch
+            try {
+                const res = await fetchWithTimeout(url, { timeout: customTimeout });
+                if (res.ok) return await res.json();
+            } catch (e) {
+                console.warn("Direct fetch failed or blocked by CORS: " + url);
+            }
+
+            // Fallback to proxies
+            const proxies = [
+                `https://corsproxy.io/?${encodeURIComponent(url)}`,
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+            ];
+            
+            for (let proxy of proxies) {
+                try {
+                    const res = await fetchWithTimeout(proxy, { timeout: customTimeout });
+                    if (res.ok) return await res.json();
+                } catch (e) {
+                    console.warn("Proxy failed or timed out: " + proxy, e);
+                }
+            }
+            throw new Error("All fetch attempts (direct and proxy) failed for " + url);
+        }
+
+        async function fetchNodes() {
+            try {
+                let rawNodes = null;
+                let isSnapshot = false;
+
+                try {
+                    // Attempt to fetch live nodes using proxy fallback to avoid CORS
+                    console.log("Attempting to fetch live nodes (direct or via proxy)...");
+                    const data = await fetchWithProxyFallback('https://map.meshcore.io/api/v1/nodes', 10000);
+                    rawNodes = data.nodes || data;
+                    document.getElementById('header-subtitle').innerHTML = 'por Diogo Lino &nbsp;|&nbsp; <span style="color: #2ecc71;">Nós reais em direto</span>';
+                    console.log("Live fetch successful! rawNodes length:", rawNodes.length, "First node:", rawNodes[0]);
+                } catch (liveError) {
+                    console.warn("Live API fetch failed, falling back to snapshot:", liveError);
+                    // Fallback to snapshot
+                    const res = await fetch('data-br/nodes_br.json');
+                    const data = await res.json();
+                    let snapDate = data.updated_at || "21-08-2026";
+                    rawNodes = data.nodes || data;
+                    isSnapshot = true;
+                    document.getElementById('header-subtitle').innerHTML = 'por Diogo Lino &nbsp;|&nbsp; Snapshot de ' + snapDate;
+                }
+                
+                const uniqueMap = new Map();
+                for (let n of rawNodes) {
+                    if (n && (n.public_key || n.Id)) {
+                        const role = n.type !== undefined ? n.type : (n.Role !== undefined ? n.Role : 0);
+                        // if (role !== 2 && role !== 3) continue; // Temporarily disabled role check
+                        
+                        let lat = n.adv_lat || n.Lat || 0;
+                        let lon = n.adv_lon || n.Lon || 0;
+
+                        // Rough Bounding Box for Brazil
+                        if (lat !== 0 && lon !== 0 && lat >= -33.75 && lat <= 5.27 && lon >= -73.98 && lon <= -34.79) {
+                            uniqueMap.set(n.public_key || n.Id, {
+                                public_key: n.public_key || n.Id,
+                                long_name: n.adv_name || n.name || 'Unknown',
+                                latitude: lat,
+                                longitude: lon,
+                                role: role
+                            });
+                        }
+                    }
+                }
+                
+                activeNodes = Array.from(uniqueMap.values());
+                console.log("Total activeNodes:", activeNodes.length);
+            } catch (error) {
+                console.error("Error fetching nodes entirely:", error);
+                document.getElementById('header-subtitle').innerHTML = 'por Diogo Lino &nbsp;|&nbsp; <span style="color: #e74c3c;">Erro ao carregar nós</span>';
+                activeNodes = [];
+            }
+        }
+
+        async function changeBufferDistance() {
+            const useUF = document.getElementById('chkUF') ? document.getElementById('chkUF').checked : false;
+            const useDDD = document.getElementById('chkDDD') ? document.getElementById('chkDDD').checked : false;
+            
+            let activeLayers = [];
+            if (useUF) activeLayers.push('Estados');
+            if (useDDD) activeLayers.push('DDD');
+            
+            let text = 'Nenhuma camada selecionada.';
+            if (activeLayers.length > 0) {
+                text = 'Baseado em ' + activeLayers.join(' e ') + '. Os nós assumem a região mais específica possível.';
+            }
+
+            document.getElementById('header-desc').innerText = text;
+            document.getElementById('loader').style.display = 'flex';
+            
+            // Clear existing data
+            if (geoJsonLayer) map.removeLayer(geoJsonLayer);
+            if (markerLayerGroup) markerLayerGroup.clearLayers();
+            regionMapping = {};
+            markers = {};
+            
+            await fetchRegions();
+            calculateIntersectionsAndRender();
+            document.getElementById('loader').style.display = 'none';
+        }
+
+        function calculateIntersectionsAndRender() {
+            let ufGlobalExclusive = 0;
+            let ufGlobalShared = 0;
+            let ufGlobalUnassigned = 0;
+            let dddGlobalExclusive = 0;
+            let dddGlobalShared = 0;
+            let dddGlobalUnassigned = 0;
+            
+            const ufLabels = [];
+            const ufData = [];
+            const dddLabels = [];
+            const dddData = [];
+
+            // Draw markers on map
+            activeNodes.forEach(node => {
+                const pt = turf.point([node.longitude, node.latitude]);
+                const nodeRegions = [];
+                node.ufCount = 0;
+                node.dddCount = 0;
+
+                if (regionsGeoJSON && regionsGeoJSON.features) {
+                    regionsGeoJSON.features.forEach(feature => {
+                        if (turf.booleanPointInPolygon(pt, feature)) {
+                            let isDDD = feature.properties.layerType === 'ddd';
+                            nodeRegions.push(formatFirmwareRegion(feature.properties.name, isDDD));
+                            
+                            let mappingKey = feature.properties.name + (isDDD ? '|ddd' : '|uf');
+                            
+                            if (regionMapping[mappingKey]) {
+                                regionMapping[mappingKey].push(node);
+                            }
+                            
+                            if (isDDD) node.dddCount++;
+                            else node.ufCount++;
+                        }
+                    });
+                }
+                
+                if (node.ufCount === 1) ufGlobalExclusive++;
+                else if (node.ufCount > 1) ufGlobalShared++;
+                else ufGlobalUnassigned++;
+                
+                if (node.dddCount === 1) dddGlobalExclusive++;
+                else if (node.dddCount > 1) dddGlobalShared++;
+                else dddGlobalUnassigned++;
+
+                if (node.ufCount === 0 && node.dddCount === 0) {
+                      return; // Completely ignore nodes outside the borders
+                  }
+                  const marker = L.circleMarker([node.latitude, node.longitude], {
+                    radius: 5,
+                    fillColor: "#f05e16",
+                    color: "#fff",
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(markerLayerGroup);
+                
+                const name = node.name || node.short_name || node.long_name || "Nó Desconhecido";
+                const pubKey = node.public_key;
+                const shortKey = pubKey.length > 12 ? `${pubKey.substring(0,6)} (...) ${pubKey.substring(pubKey.length-6)}` : pubKey;
+                
+                if (nodeRegions.length > 0) {
+                    nodeRegions.push('#br');
+                }
+
+                const regionsHtml = nodeRegions.length > 0 ? `<br><br><b>Inserido em ${nodeRegions.length} Região(ões):</b><ul style="margin-top: 5px; padding-left: 20px;"><li>${nodeRegions.join('</li><li>')}</li></ul>` : '';
+                
+                marker.bindPopup(`<b>${name}</b><br><small>${shortKey}</small>${regionsHtml}`);
+                markers[node.public_key] = marker;
+            });
+
+            // Build UI
+            const listEl = document.getElementById('region-list');
+            listEl.innerHTML = '';
+            
+            if (!regionsGeoJSON || !regionsGeoJSON.features || regionsGeoJSON.features.length === 0) {
+                listEl.innerHTML = '<div style="padding: 30px 20px; text-align: center; color: var(--text-secondary); background: var(--bg-card); margin-bottom: 20px; border-radius: 8px; border: 1px dashed var(--border-color); font-size: 0.95em;">Por favor, ative pelo menos uma camada de regiões para visualizar os nós mapeados.</div>';
+            }
+
+            const sortedRegions = Object.keys(regionMapping).sort((a, b) => {
+                const aType = a.split('|')[1];
+                const bType = b.split('|')[1];
+                
+                if (aType !== bType) {
+                    return aType === 'uf' ? -1 : 1;
+                }
+                
+                return a.localeCompare(b);
+            });
+            
+            sortedRegions.forEach(mappingKey => {
+                const nodesInRegion = regionMapping[mappingKey];
+                if (nodesInRegion.length === 0) return;
+
+                const parts = mappingKey.split('|');
+                const name = parts[0];
+                const isDDD = parts[1] === 'ddd';
+                const fwTag = formatFirmwareRegion(name, isDDD);
+                
+                const ufMap = {
+                'ac': 'Acre', 'al': 'Alagoas', 'ap': 'Amapá', 'am': 'Amazonas', 'ba': 'Bahia',
+                'ce': 'Ceará', 'df': 'Distrito Federal', 'es': 'Espírito Santo', 'go': 'Goiás',
+                'ma': 'Maranhão', 'mt': 'Mato Grosso', 'ms': 'Mato Grosso do Sul', 'mg': 'Minas Gerais',
+                'pa': 'Pará', 'pb': 'Paraíba', 'pr': 'Paraná', 'pe': 'Pernambuco', 'pi': 'Piauí',
+                'rj': 'Rio de Janeiro', 'rn': 'Rio Grande do Norte', 'rs': 'Rio Grande do Sul',
+                'ro': 'Rondônia', 'rr': 'Roraima', 'sc': 'Santa Catarina', 'sp': 'São Paulo',
+                'se': 'Sergipe', 'to': 'Tocantins'};
+                let displayName = isDDD ? `DDD ${name}` : (ufMap[name.toLowerCase()] || name.toUpperCase());
+                
+                if (isDDD) {
+                    dddLabels.push(displayName);
+                    dddData.push(nodesInRegion.length);
+                } else {
+                    ufLabels.push(displayName);
+                    ufData.push(nodesInRegion.length);
+                }
+
+                let exclusiveCount = 0;
+                let sharedCount = 0;
+                nodesInRegion.forEach(n => {
+                    if (isDDD) {
+                        if (n.dddCount === 1) exclusiveCount++;
+                        else if (n.dddCount > 1) sharedCount++;
+                    } else {
+                        if (n.ufCount === 1) exclusiveCount++;
+                        else if (n.ufCount > 1) sharedCount++;
+                    }
+                });
+                
+                const mappedNodesCount = isDDD ? (activeNodes.length - dddGlobalUnassigned) : (activeNodes.length - ufGlobalUnassigned);
+                const pctOfTotal = mappedNodesCount > 0 ? ((nodesInRegion.length / mappedNodesCount) * 100).toFixed(1) : 0;
+                const excPct = nodesInRegion.length > 0 ? ((exclusiveCount / nodesInRegion.length) * 100).toFixed(0) : 0;
+                const shrPct = nodesInRegion.length > 0 ? ((sharedCount / nodesInRegion.length) * 100).toFixed(0) : 0;
+                
+                const groupTypeBadge = isDDD ? 
+                    `<span style="background: var(--accent-secondary); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em;">DDD</span>` : 
+                    `<span style="background: var(--accent-primary); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em;">UF</span>`;
+
+                // Sort nodes alphabetically by name
+                nodesInRegion.sort((a, b) => {
+                    const nA = a.name || a.short_name || a.long_name || "";
+                    const nB = b.name || b.short_name || b.long_name || "";
+                    return nA.localeCompare(nB);
+                });
+
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'region-group';
+
+                const header = document.createElement('div');
+                header.className = 'region-header';
+                header.innerHTML = `
+                    <div style="display:flex; flex-direction:column; gap: 4px;">
+                        <div>${displayName} <small style="color:var(--accent-primary)">(${fwTag})</small> ${groupTypeBadge}</div>
+                        <div style="font-size: 0.8em; color: var(--text-muted);">
+                            <b>${pctOfTotal}%</b> dos ${mappedNodesCount} nós abrangidos (${excPct}% exclusivos, ${shrPct}% partilhados)
+                        </div>
+                    </div>
+                    <span style="display:flex; align-items:center; gap:8px">
+                        <span style="background: var(--bg-main); padding: 2px 8px; border-radius: 12px; font-size: 0.8em; border: 1px solid var(--border-color);">${nodesInRegion.length}</span>
+                        <span class="toggle-icon">+</span>
+                    </span>
+                `;
+                header.onclick = () => toggleRegion(header);
+
+                const nodesContainer = document.createElement('div');
+                nodesContainer.className = 'region-nodes';
+
+                nodesInRegion.forEach(node => {
+                    const nodeEl = document.createElement('div');
+                    nodeEl.className = 'node-item';
+                    const name = node.name || node.short_name || node.long_name || "Nó Desconhecido";
+                    const idSnippet = node.public_key.substring(0, 8); 
+                    
+                    let isExclusive = isDDD ? (node.dddCount === 1) : (node.ufCount === 1);
+                    let badgeHtml = isExclusive ? 
+                        `<span style="color: #2ecc71; border: 1px solid #2ecc71; font-size: 0.65em; padding: 1px 4px; border-radius: 4px;">Exclusivo</span>` : 
+                        `<span style="color: #f1c40f; border: 1px solid #f1c40f; font-size: 0.65em; padding: 1px 4px; border-radius: 4px;">Partilhado</span>`;
+                    
+                    nodeEl.innerHTML = `<span style="display:flex; flex-direction:column; gap:2px;"><span style="display:flex; align-items:center; gap:8px;"><span>${name}</span> ${badgeHtml}</span><span class="node-id">${idSnippet}</span></span>`;
+                    nodeEl.onclick = () => focusNode(node.latitude, node.longitude);
+                    
+                    nodesContainer.appendChild(nodeEl);
+                });
+
+                groupDiv.appendChild(header);
+                groupDiv.appendChild(nodesContainer);
+                listEl.appendChild(groupDiv);
+            });
+            
+            // Render footer charts
+            const useUF = document.getElementById('chkUF') ? document.getElementById('chkUF').checked : false;
+            const useDDD = document.getElementById('chkDDD') ? document.getElementById('chkDDD').checked : false;
+            
+            const chartContainer = document.createElement('div');
+            chartContainer.style.padding = '20px 10px';
+            chartContainer.style.display = 'flex';
+            chartContainer.style.justifyContent = 'space-around';
+            chartContainer.style.flexWrap = 'wrap';
+            chartContainer.style.gap = '20px';
+            chartContainer.style.borderTop = '1px solid var(--border-color)';
+            chartContainer.style.marginTop = '20px';
+            
+            if (useUF) {
+                const div = document.createElement('div');
+                div.style.width = '180px';
+                div.innerHTML = `<h4 style="text-align:center; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Estatísticas - Estados (UF)</h4><canvas id="ufChart"></canvas>`;
+                chartContainer.appendChild(div);
+                
+                const divOcc = document.createElement('div');
+                divOcc.style.width = '180px';
+                divOcc.innerHTML = `<h4 style="text-align:center; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Ocupação - Estados (UF)</h4><canvas id="ufOccChart"></canvas>`;
+                chartContainer.appendChild(divOcc);
+            }
+            if (useDDD) {
+                const div = document.createElement('div');
+                div.style.width = '180px';
+                div.innerHTML = `<h4 style="text-align:center; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Estatísticas - Códigos de área (DDD)</h4><canvas id="dddChart"></canvas>`;
+                chartContainer.appendChild(div);
+                
+                const divOcc = document.createElement('div');
+                divOcc.style.width = '180px';
+                divOcc.innerHTML = `<h4 style="text-align:center; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Ocupação - Códigos de área (DDD)</h4><canvas id="dddOccChart"></canvas>`;
+                chartContainer.appendChild(divOcc);
+            }
+            
+            listEl.appendChild(chartContainer);
+            
+            const chartOptions = { 
+                plugins: { legend: { position: 'bottom', labels: { color: '#e0e0e0', font: { size: 10 } } } },
+                cutout: '65%'
+            };
+            
+            const pieOptions = { 
+                plugins: { legend: { display: false } },
+                cutout: '0%'
+            };
+            
+            const colorPalette = ['#f05e16', '#3498db', '#9b59b6', '#2ecc71', '#f1c40f', '#e74c3c', '#1abc9c', '#34495e', '#e67e22', '#16a085', '#d35400', '#2980b9', '#8e44ad', '#27ae60', '#c0392b'];
+            function getColors(count) {
+                let c = [];
+                for(let i = 0; i < count; i++) c.push(colorPalette[i % colorPalette.length]);
+                return c;
+            }
+
+            if (useUF) {
+                new Chart(document.getElementById('ufChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Exclusivos', 'Partilhados'],
+                        datasets: [{
+                            data: [ufGlobalExclusive, ufGlobalShared],
+                            backgroundColor: ['#2ecc71', '#f1c40f'],
+                            borderColor: '#1e2227',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: chartOptions
+                });
+                
+                const sortedUf = ufLabels.map((l, i) => ({ l, v: ufData[i] })).sort((a, b) => b.v - a.v);
+
+                new Chart(document.getElementById('ufOccChart'), {
+                    type: 'pie',
+                    data: {
+                        labels: sortedUf.map(i => i.l),
+                        datasets: [{
+                            data: sortedUf.map(i => i.v),
+                            backgroundColor: getColors(ufData.length),
+                            borderColor: '#1e2227',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: pieOptions
+                });
+            }
+            
+            if (useDDD) {
+                new Chart(document.getElementById('dddChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Exclusivos', 'Partilhados'],
+                        datasets: [{
+                            data: [dddGlobalExclusive, dddGlobalShared],
+                            backgroundColor: ['#2ecc71', '#f1c40f'],
+                            borderColor: '#1e2227',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: chartOptions
+                });
+                
+                const sortedDDD = dddLabels.map((l, i) => ({ l, v: dddData[i] })).sort((a, b) => b.v - a.v);
+
+                new Chart(document.getElementById('dddOccChart'), {
+                    type: 'pie',
+                    data: {
+                        labels: sortedDDD.map(i => i.l),
+                        datasets: [{
+                            data: sortedDDD.map(i => i.v),
+                            backgroundColor: getColors(dddData.length),
+                            borderColor: '#1e2227',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: pieOptions
+                });
+            }
+        }
+
+        window.onload = async () => {
+            document.getElementById('loader').style.display = 'flex';
+            initMap();
+            await fetchNodes();
+            await changeBufferDistance();
+        };
+
+    </script>
+</body>
+</html>
